@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import os
 from typing import Any
 
 from pydantic_ai import Agent
@@ -9,6 +11,7 @@ from pydantic_ai import Agent
 from app.config import get_settings
 from app.connect.base import SourceSchema, TableSchema
 
+logger = logging.getLogger("baseflo.discovery")
 settings = get_settings()
 
 DISCOVERY_PROMPT = """
@@ -40,10 +43,28 @@ class DiscoveryAgent:
     """LLM-powered schema semantic labeling."""
 
     def __init__(self) -> None:
-        self._agent = Agent(
-            model=settings.openai_model,
-            system_prompt=DISCOVERY_PROMPT,
-        )
+        self._agent: Agent | None = None
+
+    def _ensure_agent(self) -> Agent | None:
+        """Lazy-init the LLM agent. Returns None if OpenAI is not configured."""
+        if self._agent is not None:
+            return self._agent
+
+        # pydantic_ai reads OPENAI_API_KEY from os.environ.
+        # Our Settings load from .env but don't mutate os.environ, so we
+        # inject the key here if it's present in our config.
+        if settings.openai_api_key and not os.environ.get("OPENAI_API_KEY"):
+            os.environ["OPENAI_API_KEY"] = settings.openai_api_key.get_secret_value()
+
+        try:
+            self._agent = Agent(
+                model=settings.openai_model,
+                system_prompt=DISCOVERY_PROMPT,
+            )
+            return self._agent
+        except Exception as exc:
+            logger.warning("OpenAI agent unavailable, using fallback labels: %s", exc)
+            return None
 
     async def discover(self, schema: SourceSchema) -> list[DiscoveryResult]:
         """Label all tables in a source schema."""
