@@ -1,0 +1,46 @@
+{
+  "name": "@baseflo/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zod schemas + derived TS types for every contract that crosses the network boundary. See docs/40-features/WEB-APP.md §3.5.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./auth": {
+      "types": "./src/auth.ts",
+      "import": "./src/auth.ts"
+    },
+    "./project": {
+      "types": "./src/project.ts",
+      "import": "./src/project.ts"
+    },
+    "./connector": {
+      "types": "./src/connector.ts",
+      "import": "./src/connector.ts"
+    },
+    "./saga": {
+      "types": "./src/saga.ts",
+      "import": "./src/saga.ts"
+    },
+    "./common": {
+      "types": "./src/common.ts",
+      "import": "./src/common.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit -p tsconfig.lib.json"
+  },
+  "dependencies": {
+    "zod": "4.0.0"
+  },
+  "devDependencies": {
+    "@baseflo/config": "workspace:*",
+    "typescript": "5.7.2",
+    "vitest": "3.0.4"
+  }
+}

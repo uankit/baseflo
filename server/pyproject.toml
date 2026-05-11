@@ -1,0 +1,159 @@
+[project]
+name = "baseflo-server"
+version = "0.1.0"
+description = "Baseflo agentic business operations layer — server"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+authors = [{ name = "Baseflo" }]
+
+dependencies = [
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    # Pydantic ecosystem
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "pydantic-ai-slim[openai]>=0.0.20",
+    # ORM & migrations
+    "sqlalchemy[asyncio]>=2.0.36",
+    "alembic>=1.14.0",
+    "asyncpg>=0.30.0",
+    "greenlet>=3.1.0",
+    # SQL parsing / dialects
+    "sqlglot>=25.30.0",
+    # In-engine analytics
+    "duckdb>=1.1.0",
+    "polars>=1.15.0",
+    # duckdb needs pytz to convert TIMESTAMPTZ values into Python datetimes;
+    # not pulled in transitively, so we declare it here.
+    "pytz>=2024.2",
+    # Background jobs
+    "arq>=0.26.1",
+    # HTTP client
+    "httpx>=0.27.0",
+    "tenacity>=9.0.0",
+    # Connectors
+    "openpyxl>=3.1.5", # Excel .xlsx parsing for the file-upload connector
+    # Auth helpers
+    "argon2-cffi>=23.1.0",
+    "authlib>=1.3.0",
+    "itsdangerous>=2.2.0",
+    # Observability
+    "structlog>=24.4.0",
+    "opentelemetry-api>=1.28.0",
+    "opentelemetry-sdk>=1.28.0",
+    "opentelemetry-instrumentation-fastapi>=0.49b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.49b0",
+    "opentelemetry-instrumentation-asyncpg>=0.49b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.28.0",
+    "prometheus-client>=0.21.0",
+    "sentry-sdk[fastapi]>=2.18.0",
+    # Identifiers
+    "uuid-utils>=0.10.0",
+    # Crypto
+    "cryptography>=43.0.0",
+    "python-multipart>=0.0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+    "import-linter>=2.1.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-postgresql>=6.1.1",
+    "freezegun>=1.5.0",
+    "respx>=0.21.0",
+    "boto3-stubs[kms,s3]>=1.35.0",
+    "types-pyyaml>=6.0.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# ----------- pytest -----------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "integration: integration tests requiring a database",
+    "slow: slow tests; skipped in fast loops",
+]
+
+# ----------- ruff -----------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+# Per docs/05-coding-rules.md: typed everything, no bare except, no print, no Any drift.
+select = [
+    "E", "F", "W",      # pycodestyle / pyflakes
+    "I",                 # isort
+    "B",                 # bugbear
+    "UP",                # pyupgrade
+    "N",                 # pep8-naming
+    "ANN",               # type annotations
+    "ASYNC",             # async correctness
+    "S",                 # security (bandit)
+    "BLE",               # blind-except
+    "C4",                # comprehensions
+    "DTZ",               # naive datetimes forbidden
+    "ICN",               # import conventions
+    "INP",               # implicit namespace packages
+    "PIE",               # misc lints
+    "PT",                # pytest style
+    "RET",               # return statements
+    "SIM",               # simplify
+    "TID",               # tidy imports
+    "TC",                # type-checking imports
+    "T20",               # no print
+    "PYI",               # type-stub correctness
+    "RUF",               # ruff-specific
+]
+ignore = [
+    "ANN401",            # Allow `Any` only where justified by # type: ignore[misc] inline
+    "S101",              # asserts allowed in tests
+    "PT011",             # broad pytest.raises ok with match=
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S", "ANN", "INP"]
+"migrations/**/*.py" = ["ANN", "INP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ----------- mypy -----------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+disallow_untyped_decorators = true
+no_implicit_reexport = true
+plugins = ["pydantic.mypy"]
+exclude = ["migrations/versions"]
+
+[[tool.mypy.overrides]]
+module = ["arq.*", "duckdb.*", "asyncpg.*", "openpyxl.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

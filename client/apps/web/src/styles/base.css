@@ -1,0 +1,42 @@
+/*
+ * Tailwind v4 entry. The single `@import 'tailwindcss'` pulls in Preflight,
+ * the component layer, and utilities generated from the @theme block in
+ * @baseflo/ui/tokens.css.
+ *
+ * The `@source` directive teaches Tailwind which files to scan for class
+ * names. The Vite plugin auto-detects within apps/web, but `@baseflo/ui`
+ * lives in a sibling workspace package and must be opted in explicitly.
+ */
+@import 'tailwindcss';
+@import '@baseflo/ui/tokens.css';
+
+@source '../../../../packages/ui/src/**/*.{ts,tsx}';
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  /* Tabular numbers in tables and metric strips. */
+  table,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

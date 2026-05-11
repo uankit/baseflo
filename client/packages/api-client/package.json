@@ -1,0 +1,42 @@
+{
+  "name": "@baseflo/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gateway + transport boundary for the Baseflo web app. UI consumes named gateway methods; transports handle protocol details. See docs/40-features/WEB-APP.md §3.6 and docs/06-design.md §6.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./transports/placeholder": {
+      "types": "./src/transports/placeholder.ts",
+      "import": "./src/transports/placeholder.ts"
+    },
+    "./transports/rest": {
+      "types": "./src/transports/rest.ts",
+      "import": "./src/transports/rest.ts"
+    },
+    "./transports/sse": {
+      "types": "./src/transports/sse.ts",
+      "import": "./src/transports/sse.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit -p tsconfig.lib.json"
+  },
+  "dependencies": {
+    "@baseflo/contracts": "workspace:*",
+    "@baseflo/error-system": "workspace:*",
+    "zod": "4.0.0"
+  },
+  "devDependencies": {
+    "@baseflo/config": "workspace:*",
+    "happy-dom": "16.5.0",
+    "typescript": "5.7.2",
+    "vitest": "3.0.4"
+  }
+}

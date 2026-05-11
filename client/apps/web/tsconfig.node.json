@@ -1,0 +1,11 @@
+{
+  "extends": "@baseflo/config/tsconfig.base",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "types": ["node"],
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "include": ["vite.config.ts", "tailwind.config.ts", "postcss.config.cjs", "vitest.config.ts"]
+}

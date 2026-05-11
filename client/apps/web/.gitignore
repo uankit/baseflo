@@ -1,0 +1,9 @@
+node_modules
+.turbo
+.vite
+dist
+build
+coverage
+.env.local
+.env.*.local
+src/routeTree.gen.ts

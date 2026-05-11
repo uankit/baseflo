@@ -1,0 +1,33 @@
+{
+  "name": "baseflo-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Baseflo hosted web app monorepo. See docs/06-design.md and docs/40-features/WEB-APP.md.",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.10",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tanstack/router-generator": "1.95.5",
+      "@tailwindcss/node": "4.2.4",
+      "@tailwindcss/oxide": "4.2.4"
+    }
+  },
+  "devDependencies": {
+    "eslint": "9.17.0",
+    "prettier": "3.4.2",
+    "turbo": "2.9.10",
+    "typescript": "5.7.2"
+  }
+}

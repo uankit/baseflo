@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: baseflo-postgres-dev
+    environment:
+      POSTGRES_USER: baseflo
+      POSTGRES_PASSWORD: baseflo
+      POSTGRES_DB: baseflo
+    ports:
+      - "5432:5432"
+    volumes:
+      - baseflo_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baseflo -d baseflo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    command:
+      - "postgres"
+      - "-c"
+      - "log_statement=none"
+      - "-c"
+      - "max_connections=200"
+
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: baseflo-postgres-test
+    environment:
+      POSTGRES_USER: baseflo
+      POSTGRES_PASSWORD: baseflo
+      POSTGRES_DB: baseflo_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baseflo -d baseflo_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: baseflo-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - baseflo_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  baseflo_pg_data:
+  baseflo_redis_data:

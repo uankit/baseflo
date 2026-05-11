@@ -1,0 +1,24 @@
+{
+  "name": "@baseflo/error-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Centralized BF-WEB-NNN error registry, normalizer, and React-safe error props. See docs/40-features/WEB-APP.md §15.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit -p tsconfig.lib.json"
+  },
+  "devDependencies": {
+    "@baseflo/config": "workspace:*",
+    "typescript": "5.7.2",
+    "vitest": "3.0.4"
+  }
+}

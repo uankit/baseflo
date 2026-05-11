@@ -1,0 +1,223 @@
+/*
+ * Baseflo design tokens — Tailwind v4 source-of-truth.
+ *
+ * Per docs/06-design.md §4.1: tokens are SEMANTIC (`--color-success`, never
+ * `--color-green`). Component code consumes them via Tailwind utility classes
+ * — never hex literals.
+ *
+ * Tailwind v4 generates utilities directly from these token names. Adding a
+ * token here is a one-line change; no preset, no config file. Theme switch
+ * (light → dark) is a `[data-theme="dark"]` block at the bottom that
+ * overrides the same variables; component code never branches on theme.
+ */
+
+@theme {
+  /* ── Surface ────────────────────────────────────────────────────────── */
+  --color-bg: hsl(220 20% 98%);
+  --color-surface: hsl(0 0% 100%);
+  --color-surface-2: hsl(220 14% 96%);
+  --color-border: hsl(220 13% 91%);
+  --color-border-focus: hsl(217 91% 60%);
+
+  /* ── Foreground ─────────────────────────────────────────────────────── */
+  --color-fg: hsl(222 47% 11%);
+  --color-fg-muted: hsl(215 16% 47%);
+  --color-fg-subtle: hsl(217 13% 64%);
+  --color-fg-on-accent: hsl(0 0% 100%);
+
+  /* ── Accents ────────────────────────────────────────────────────────── */
+  --color-accent: hsl(217 91% 60%);
+  --color-accent-hover: hsl(217 91% 54%);
+  --color-accent-soft: hsl(217 100% 96%);
+
+  /* ── Semantic ───────────────────────────────────────────────────────── */
+  --color-success: hsl(142 71% 45%);
+  --color-warning: hsl(38 92% 50%);
+  --color-danger: hsl(0 84% 60%);
+  --color-info: hsl(199 89% 48%);
+  --color-private: hsl(280 30% 50%);
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  /* Editorial serif. Used at moments of trust / reveal — sign-in headline,
+     workspace.ready hero, the unified-customer count, share-page summary,
+     refinement plan title. Body text stays sans. */
+  --font-serif: 'Newsreader', 'Source Serif Pro', ui-serif, Georgia, serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* ── Spacing — 4px base ─────────────────────────────────────────────── */
+  --spacing: 0.25rem;
+
+  /* ── Radius ─────────────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 9999px;
+
+  /* ── Shadow ─────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px hsl(220 13% 91% / 0.5);
+  --shadow-md: 0 4px 12px hsl(220 13% 91% / 0.6);
+  --shadow-lg: 0 8px 24px hsl(220 13% 87% / 0.7);
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  --ease-baseflo: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Tailwind v4 reads `--duration-*` for `duration-*` utilities. */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
+
+  /* ── Z-index ────────────────────────────────────────────────────────── */
+  --z-index-sticky: 100;
+  --z-index-overlay: 1000;
+  --z-index-modal: 1100;
+  --z-index-toast: 1200;
+  --z-index-tooltip: 1300;
+
+  /* ── State-bearing motion (06-design.md §4.8 allowed list) ──────────── */
+  --animate-pulse-ring: pulse-ring 2s var(--ease-baseflo) infinite;
+  --animate-slide-in-right: slide-in-right var(--duration-slow) var(--ease-baseflo);
+  --animate-slide-in-top: slide-in-top var(--duration-slow) var(--ease-baseflo);
+  --animate-fade-in: fade-in var(--duration-normal) var(--ease-baseflo);
+  --animate-reveal-mask: reveal-mask var(--duration-slow) var(--ease-baseflo);
+  --animate-sync-pulse: sync-pulse 1.6s var(--ease-baseflo) infinite;
+}
+
+/* ── Keyframes for state-bearing motion ──────────────────────────────────
+ * Each one communicates a real product state:
+ *   pulse-ring     — agent is currently thinking
+ *   slide-in-*     — fresh artifact / activity arrived
+ *   fade-in        — element revealed (after data load)
+ *   reveal-mask    — PII unmask
+ *   sync-pulse     — connector actively syncing
+ * No decorative animations.
+ */
+
+@keyframes pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--color-accent) / 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--color-accent) / 0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes reveal-mask {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes sync-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/*
+ * Atmospheric background — used on the public landing page to give the
+ * product real visual identity (our equivalent of Cardinal's red field).
+ * Three layered radial gradients in our accent token, plus a soft dot grid
+ * for texture. Light enough to stay editorial; present enough to stop
+ * reading as "blank white page".
+ */
+.bg-atmospheric {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 18% -10%,
+      hsl(var(--color-accent) / 0.18),
+      transparent 60%),
+    radial-gradient(ellipse 70% 60% at 110% 20%,
+      hsl(var(--color-accent) / 0.10),
+      transparent 60%),
+    radial-gradient(ellipse 90% 50% at 50% 110%,
+      hsl(var(--color-accent) / 0.08),
+      transparent 60%);
+}
+
+.bg-grid-dots {
+  background-image:
+    radial-gradient(circle at center,
+      hsl(var(--color-fg) / 0.06) 1px,
+      transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/*
+ * Dark theme override block — wired in M3. Same token slots, different values.
+ * Components remain theme-agnostic; they reference token names only.
+ */
+[data-theme='dark'] {
+  --color-bg: hsl(222 47% 9%);
+  --color-surface: hsl(222 47% 11%);
+  --color-surface-2: hsl(222 47% 14%);
+  --color-border: hsl(217 19% 27%);
+  --color-fg: hsl(220 14% 96%);
+  --color-fg-muted: hsl(215 16% 65%);
+  --color-fg-subtle: hsl(217 13% 50%);
+  --color-accent-soft: hsl(217 91% 16%);
+}
+
+/* Reduced motion — collapses motion to instant transitions globally. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+  }
+}

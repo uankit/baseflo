@@ -1,0 +1,51 @@
+{
+  "name": "@baseflo/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Baseflo hosted web app. See docs/40-features/WEB-APP.md.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --port 5174",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "typecheck": "tsc -b --emitDeclarationOnly false --noEmit"
+  },
+  "dependencies": {
+    "@baseflo/api-client": "workspace:*",
+    "@baseflo/contracts": "workspace:*",
+    "@baseflo/error-system": "workspace:*",
+    "@baseflo/ui": "workspace:*",
+    "@hookform/resolvers": "3.10.0",
+    "@tanstack/react-query": "5.62.11",
+    "@tanstack/react-router": "1.95.5",
+    "date-fns": "4.1.0",
+    "framer-motion": "^12.38.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-hook-form": "7.54.2",
+    "zod": "4.0.0",
+    "zustand": "5.0.2"
+  },
+  "devDependencies": {
+    "@baseflo/config": "workspace:*",
+    "@tailwindcss/vite": "4.2.4",
+    "@tanstack/react-query-devtools": "5.62.11",
+    "@tanstack/router-devtools": "1.95.5",
+    "@tanstack/router-plugin": "1.95.5",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.1.0",
+    "@testing-library/user-event": "14.5.2",
+    "@types/node": "22.10.2",
+    "@types/react": "19.0.2",
+    "@types/react-dom": "19.0.2",
+    "@vitejs/plugin-react": "4.3.4",
+    "happy-dom": "16.5.0",
+    "tailwindcss": "4.2.4",
+    "typescript": "5.7.2",
+    "vite": "6.0.5",
+    "vitest": "3.0.4"
+  }
+}
