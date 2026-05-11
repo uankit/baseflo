@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger("baseflo.connectors.google_sheets")
 
 from app.connect.base import ColumnSchema, Connector, Row, SourceQuery, SourceSchema, TableSchema
 from app.config import get_settings
@@ -199,16 +202,20 @@ class GoogleSheetsConnector(Connector):
         access_token = config["credentials"]["access_token"]
         headers = {"Authorization": f"Bearer {access_token}"}
 
-        # query.table is the sanitized sheet name; we need the original title
-        # For MVP, assume sanitized == original lowercased/underscored
-        # In production, we'd store the mapping
-        sheet_title = query.table.replace("_", " ").title()
+        # Use the original sheet title (label) if available, otherwise reconstruct
+        sheet_title = query.label or query.table.replace("_", " ").title()
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Get all values (no limit for MVP; Google Sheets has 5M cell limit anyway)
-            range_a1 = f"{sheet_title}"
+            # Sheet names with spaces need to be single-quoted in the A1 range
+            range_a1 = f"'{sheet_title}'" if " " in sheet_title else sheet_title
             values_url = f"{SHEETS_API_BASE}/{spreadsheet_id}/values/{range_a1}"
             resp = await client.get(values_url, headers=headers)
+            if resp.status_code != 200:
+                logger.error(
+                    "Google Sheets read failed: %s %s — %s",
+                    resp.status_code, values_url, resp.text,
+                )
             resp.raise_for_status()
             data = resp.json()
             values = data.get("values", [])

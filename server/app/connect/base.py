@@ -37,6 +37,7 @@ class Row:
 @dataclass(frozen=True, slots=True)
 class SourceQuery:
     table: str
+    label: str | None = None  # original source name (e.g. sheet title with spaces)
     limit: int | None = None
     since: str | None = None  # incremental sync cursor
 

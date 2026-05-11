@@ -112,7 +112,7 @@ class SyncEngine:
 
         # Stream rows and insert
         connector_config = {**source.config, "credentials": source.credentials}
-        query = SourceQuery(table=table_schema.name)
+        query = SourceQuery(table=table_schema.name, label=table_schema.label)
         count = 0
         batch: list[dict[str, Any]] = []
         BATCH_SIZE = 500
