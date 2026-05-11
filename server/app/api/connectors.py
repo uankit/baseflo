@@ -35,7 +35,14 @@ async def google_sheets_auth_url(
     connector = get_connector("google_sheets")
     assert isinstance(connector, GoogleSheetsConnector)
 
-    redirect_uri = str(request.base_url).rstrip("/") + "/api/v1/connectors/google-sheets/callback"
+    from app.config import get_settings
+    settings = get_settings()
+    if settings.google_oauth_redirect_uri:
+        redirect_uri = settings.google_oauth_redirect_uri
+    else:
+        # Use frontend URL so the redirect matches what the user registered
+        # in Google Cloud Console (e.g. http://localhost:5173/...)
+        redirect_uri = settings.frontend_url.rstrip("/") + "/api/v1/connectors/google-sheets/callback"
     state = json.dumps({"project_id": str(project_id), "redirect_uri": redirect_uri})
 
     url = connector.get_auth_url(redirect_uri=redirect_uri, state=state)

@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     google_client_secret: SecretStr | None = Field(
         default=None, alias="BASEFLO_GOOGLE_CLIENT_SECRET"
     )
+    google_oauth_redirect_uri: str | None = Field(
+        default=None, alias="BASEFLO_GOOGLE_OAUTH_REDIRECT_URI"
+    )
 
     # Frontend URL
     frontend_url: str = Field(
