@@ -8,15 +8,19 @@ export interface RestTransportConfig {
   baseUrl: string;
   /** Hook for the host app to inject CSRF tokens, custom headers, etc. */
   enrichHeaders?: () => HeaderBag;
+  /** Hook to inject the current auth token for Bearer authorization. */
+  getToken?: () => string | null;
 }
 
 export class RestTransport implements Transport {
   private readonly baseUrl: string;
   private readonly enrichHeaders: () => HeaderBag;
+  private readonly getToken: () => string | null;
 
   constructor(config: RestTransportConfig) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, '');
     this.enrichHeaders = config.enrichHeaders ?? (() => ({}));
+    this.getToken = config.getToken ?? (() => null);
   }
 
   async request<TData>(
@@ -24,6 +28,7 @@ export class RestTransport implements Transport {
     schema: z.ZodSchema<TData>,
   ): Promise<TransportResponse<TData>> {
     const url = this.buildUrl(req.path, req.query);
+    const token = this.getToken();
     let response: Response;
     try {
       response = await fetch(url, {
@@ -31,6 +36,7 @@ export class RestTransport implements Transport {
         headers: {
           'content-type': 'application/json',
           accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...this.enrichHeaders(),
         },
         body: req.body !== undefined ? JSON.stringify(req.body) : undefined,

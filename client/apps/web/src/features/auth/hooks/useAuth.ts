@@ -1,50 +1,55 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { MagicLinkRequest, Session, SignInRequest } from '@baseflo/contracts';
 import { useGateway } from '../../../providers/GatewayProvider.js';
-import { createAuthService } from '../services/authService.js';
+import { createAuthService, type AuthUser } from '../services/authService.js';
 
-const SESSION_KEY = ['auth', 'session'] as const;
+const USER_KEY = ['auth', 'user'] as const;
 
-/**
- * The single React-side entry point into the auth feature. Exposes a typed
- * surface for sign-in, magic-link, session lookup, and sign-out.
- */
 export function useAuth() {
   const gateway = useGateway();
   const queryClient = useQueryClient();
   const service = useMemo(() => createAuthService(gateway), [gateway]);
 
-  const sessionQuery = useQuery<Session>({
-    queryKey: SESSION_KEY,
-    queryFn: () => service.session(),
-    retry: false,
-    enabled: false, // sign-in screen does not auto-fetch; protected routes opt in.
-  });
-
-  const signIn = useMutation({
-    mutationFn: (req: SignInRequest) => service.signInWithPassword(req),
-    onSuccess: (session) => {
-      queryClient.setQueryData(SESSION_KEY, session);
+  const userQuery = useQuery<AuthUser | null>({
+    queryKey: USER_KEY,
+    queryFn: async () => {
+      try {
+        return await service.fetchMe();
+      } catch {
+        return null;
+      }
     },
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const requestMagicLink = useMutation({
-    mutationFn: (req: MagicLinkRequest) => service.requestMagicLink(req),
+    mutationFn: (email: string) => service.requestMagicLink(email),
+  });
+
+  const verifyMagicLink = useMutation({
+    mutationFn: ({ email, token }: { email: string; token: string }) =>
+      service.verifyMagicLink(email, token),
+    onSuccess: (user) => {
+      queryClient.setQueryData(USER_KEY, user);
+    },
   });
 
   const signOut = useMutation({
     mutationFn: () => service.signOut(),
     onSuccess: () => {
-      queryClient.setQueryData(SESSION_KEY, null);
+      queryClient.setQueryData(USER_KEY, null);
+      queryClient.clear();
     },
   });
 
   return {
-    session: sessionQuery.data ?? null,
-    isLoading: sessionQuery.isPending,
-    signIn,
+    user: userQuery.data ?? null,
+    isLoading: userQuery.isPending,
+    isAuthenticated: !!userQuery.data,
     requestMagicLink,
+    verifyMagicLink,
     signOut,
   };
 }

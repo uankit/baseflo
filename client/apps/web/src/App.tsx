@@ -1,7 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { ToastProvider, TooltipProvider } from '@baseflo/ui';
 import { router } from './router.js';
 import { GatewayProvider } from './providers/GatewayProvider.js';
 import { createDevGateway } from './providers/createDevGateway.js';
@@ -35,11 +34,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <GatewayProvider gateway={gateway}>
-        <ToastProvider>
-          <TooltipProvider delayDuration={200}>
-            <RouterProvider router={router} context={{ gateway }} />
-          </TooltipProvider>
-        </ToastProvider>
+        <RouterProvider router={router} context={{ gateway }} />
       </GatewayProvider>
     </QueryClientProvider>
   );
