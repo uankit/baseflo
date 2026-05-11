@@ -44,7 +44,8 @@ class BrainOrchestrator:
             # 2. Introspect source schema
             logger.info("[brain] introspecting source=%s", source_id)
             connector = get_connector(source.kind)
-            schema = await connector.introspect(source.config)
+            connector_config = {**source.config, "credentials": source.credentials}
+            schema = await connector.introspect(connector_config)
             logger.info("[brain] found %d tables for source=%s", len(schema.tables), source_id)
 
             # 3. DiscoveryAgent → semantic labels

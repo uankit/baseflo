@@ -42,8 +42,10 @@ class SyncEngine:
 
         try:
             connector = get_connector(source.kind)
+            # Merge credentials into config for connector protocol
+            connector_config = {**source.config, "credentials": source.credentials}
             logger.info("[sync] introspecting source=%s", source.id)
-            schema = await connector.introspect(source.config)
+            schema = await connector.introspect(connector_config)
             logger.info("[sync] discovered %d tables for source=%s", len(schema.tables), source.id)
 
             total_rows = 0
@@ -109,12 +111,13 @@ class SyncEngine:
         await self._session.execute(text(ddl))
 
         # Stream rows and insert
+        connector_config = {**source.config, "credentials": source.credentials}
         query = SourceQuery(table=table_schema.name)
         count = 0
         batch: list[dict[str, Any]] = []
         BATCH_SIZE = 500
 
-        async for row in connector.read(source.config, query):
+        async for row in connector.read(connector_config, query):
             record: dict[str, Any] = {
                 "_baseflo_source_id": row.source_id,
             }
