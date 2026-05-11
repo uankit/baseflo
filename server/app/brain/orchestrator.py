@@ -36,11 +36,11 @@ class BrainOrchestrator:
         """
         logger.info("[brain] starting pipeline for source=%s", source_id)
         if session is not None:
-            return await self._run_pipeline(source_id, session)
+            return await self._run_pipeline(source_id, session, should_commit=False)
         async with open_session() as session:
-            return await self._run_pipeline(source_id, session)
+            return await self._run_pipeline(source_id, session, should_commit=True)
 
-    async def _run_pipeline(self, source_id: str, session) -> list[Insight]:
+    async def _run_pipeline(self, source_id: str, session, should_commit: bool = True) -> list[Insight]:
         """Core pipeline logic."""
         # 1. Load source + project
         result = await session.execute(
@@ -127,7 +127,8 @@ class BrainOrchestrator:
             session.add(insight)
             persisted_insights.append(insight)
 
-        await session.commit()
+        if should_commit:
+            await session.commit()
         logger.info("[brain] committed %d insights for source=%s", len(persisted_insights), source_id)
 
         # 7. Push new insights via WebSocket
