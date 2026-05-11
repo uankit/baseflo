@@ -29,7 +29,8 @@ router = APIRouter()
 async def google_sheets_auth_url(
     request: Request,
     project_id: UUID,
-    tenant: Annotated[TenantCtx, Depends(require_auth)],
+    spreadsheet_id: str | None = None,
+    tenant: Annotated[TenantCtx, Depends(require_auth)] = None,
 ) -> dict[str, str]:
     """Get the Google OAuth consent URL."""
     connector = get_connector("google_sheets")
@@ -42,7 +43,11 @@ async def google_sheets_auth_url(
     else:
         # Backward-compatible with v1 Google Cloud Console registrations
         redirect_uri = settings.api_base_url.rstrip("/") + "/api/v1/oauth/google_sheets/callback"
-    state = json.dumps({"project_id": str(project_id), "redirect_uri": redirect_uri})
+    state = json.dumps({
+        "project_id": str(project_id),
+        "redirect_uri": redirect_uri,
+        "spreadsheet_id": spreadsheet_id,
+    })
 
     url = connector.get_auth_url(redirect_uri=redirect_uri, state=state)
     return {"auth_url": url}

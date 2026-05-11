@@ -31,7 +31,7 @@ export function ConnectorSetup({ projectId }: ConnectorSetupProps) {
   });
 
   const handleOAuth = async () => {
-    const resp = await gateway.connectors.getAuthUrl(projectId);
+    const resp = await gateway.connectors.getAuthUrl(projectId, spreadsheetId || undefined);
     window.location.href = resp.auth_url;
   };
 

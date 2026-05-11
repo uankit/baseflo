@@ -31,6 +31,7 @@ async def google_sheets_callback(
     state_data = json.loads(state)
     project_id = UUID(state_data["project_id"])
     redirect_uri = state_data["redirect_uri"]
+    spreadsheet_id = state_data.get("spreadsheet_id") or None
 
     connector = get_connector("google_sheets")
     assert isinstance(connector, GoogleSheetsConnector)
@@ -57,17 +58,23 @@ async def google_sheets_callback(
             project_id=project_id,
             kind="google_sheets",
             name="Google Sheets",
-            config={"spreadsheet_id": None},
+            config={"spreadsheet_id": spreadsheet_id},
             credentials={
                 "access_token": access_token,
                 "refresh_token": refresh_token,
                 "expires_at": expires_at.isoformat(),
             },
-            status="pending",
+            status="active" if spreadsheet_id else "pending",
         )
         session.add(source)
         await session.flush()
 
+    if spreadsheet_id:
+        return {
+            "message": "Google Sheets connected and ready to sync.",
+            "source_id": str(source.id),
+            "status": "active",
+        }
     return {
         "message": "Google Sheets connected. Please provide a spreadsheet ID to complete setup.",
         "source_id": str(source.id),
