@@ -157,9 +157,10 @@ export class Gateway {
       return resp.data;
     },
 
-    getAuthUrl: async (projectId: string, spreadsheetId?: string): Promise<{ auth_url: string }> => {
+    getAuthUrl: async (projectId: string, spreadsheetId?: string, returnTo?: string): Promise<{ auth_url: string }> => {
       const query: Record<string, string> = { project_id: projectId };
       if (spreadsheetId) query.spreadsheet_id = spreadsheetId;
+      if (returnTo) query.return_to = returnTo;
       const resp = await this.transport.request(
         { method: 'GET', path: '/api/v1/connectors/google-sheets/auth-url', query },
         z.object({ auth_url: z.string() }),

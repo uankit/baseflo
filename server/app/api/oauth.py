@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Request
+from fastapi.responses import RedirectResponse
 
 from app.connect.google_sheets import GoogleSheetsConnector
 from app.connect.registry import get as get_connector
@@ -32,6 +33,7 @@ async def google_sheets_callback(
     project_id = UUID(state_data["project_id"])
     redirect_uri = state_data["redirect_uri"]
     spreadsheet_id = state_data.get("spreadsheet_id") or None
+    return_to = state_data.get("return_to")
 
     connector = get_connector("google_sheets")
     assert isinstance(connector, GoogleSheetsConnector)
@@ -68,6 +70,10 @@ async def google_sheets_callback(
         )
         session.add(source)
         await session.flush()
+
+    # If the client provided a return_to URL, redirect back to the app
+    if return_to:
+        return RedirectResponse(url=return_to, status_code=302)
 
     if spreadsheet_id:
         return {

@@ -30,6 +30,7 @@ async def google_sheets_auth_url(
     request: Request,
     project_id: UUID,
     spreadsheet_id: str | None = None,
+    return_to: str | None = None,
     tenant: Annotated[TenantCtx, Depends(require_auth)] = None,
 ) -> dict[str, str]:
     """Get the Google OAuth consent URL."""
@@ -47,6 +48,7 @@ async def google_sheets_auth_url(
         "project_id": str(project_id),
         "redirect_uri": redirect_uri,
         "spreadsheet_id": spreadsheet_id,
+        "return_to": return_to,
     })
 
     url = connector.get_auth_url(redirect_uri=redirect_uri, state=state)
