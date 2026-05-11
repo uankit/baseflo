@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from app.connect.base import Connector
+from app.connect.google_sheets import GoogleSheetsConnector
 from app.core.errors import BasefloError
 
 _registry: dict[str, Connector] = {}
@@ -27,3 +26,7 @@ def get(kind: str) -> Connector:
 
 def list_kinds() -> list[str]:
     return list(_registry.keys())
+
+
+# Register built-in connectors
+register("google_sheets", GoogleSheetsConnector())
