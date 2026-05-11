@@ -260,3 +260,14 @@ class Message(Base, UUIDMixin, TimestampMixin):
     data: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     conversation: Mapped[Conversation] = relationship(back_populates="messages")
+
+
+class MagicLinkToken(Base, UUIDMixin, TimestampMixin):
+    __tablename__ = "magic_link_tokens"
+
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
