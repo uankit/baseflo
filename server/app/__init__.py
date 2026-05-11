@@ -1,3 +1,1 @@
-"""Baseflo server package."""
-
-__version__ = "0.1.0"
+"""Baseflo Brain v2 — autonomous business intelligence."""
