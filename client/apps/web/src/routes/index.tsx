@@ -14,6 +14,8 @@ function HomePage() {
     if (isLoading) return;
     if (!isAuthenticated) {
       navigate({ to: '/sign-in', replace: true });
+    } else {
+      navigate({ to: '/welcome', replace: true });
     }
   }, [isLoading, isAuthenticated, navigate]);
 
