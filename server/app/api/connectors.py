@@ -40,9 +40,8 @@ async def google_sheets_auth_url(
     if settings.google_oauth_redirect_uri:
         redirect_uri = settings.google_oauth_redirect_uri
     else:
-        # Use frontend URL so the redirect matches what the user registered
-        # in Google Cloud Console (e.g. http://localhost:5173/...)
-        redirect_uri = settings.frontend_url.rstrip("/") + "/api/v1/connectors/google-sheets/callback"
+        # Backward-compatible with v1 Google Cloud Console registrations
+        redirect_uri = settings.api_base_url.rstrip("/") + "/api/v1/oauth/google_sheets/callback"
     state = json.dumps({"project_id": str(project_id), "redirect_uri": redirect_uri})
 
     url = connector.get_auth_url(redirect_uri=redirect_uri, state=state)

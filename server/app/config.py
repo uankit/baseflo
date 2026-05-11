@@ -48,7 +48,10 @@ class Settings(BaseSettings):
         default=None, alias="BASEFLO_GOOGLE_OAUTH_REDIRECT_URI"
     )
 
-    # Frontend URL
+    # API / Frontend URLs
+    api_base_url: str = Field(
+        default="http://localhost:8000", alias="BASEFLO_API_BASE_URL"
+    )
     frontend_url: str = Field(
         default="http://localhost:5173", alias="BASEFLO_FRONTEND_URL"
     )
