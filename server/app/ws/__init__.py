@@ -1,5 +1,7 @@
 """WebSocket routes for real-time insight streaming."""
 
+from typing import Any
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 router = APIRouter()
@@ -16,10 +18,15 @@ class ConnectionManager:
     def disconnect(self, project_id: str) -> None:
         self.active.pop(project_id, None)
 
-    async def push_insight(self, project_id: str, payload: dict) -> None:
+    async def push_insight(self, project_id: str, payload: dict[str, Any]) -> None:
         ws = self.active.get(project_id)
-        if ws:
-            await ws.send_json(payload)
+        if ws is None:
+            return
+        try:
+            await ws.send_json({"type": "insight", "payload": payload})
+        except Exception:
+            # Client likely disconnected; clean up
+            self.disconnect(project_id)
 
 
 manager = ConnectionManager()
@@ -35,4 +42,6 @@ async def insight_stream(websocket: WebSocket, project_id: str) -> None:
             # TODO: handle client messages (mark read, request refresh, etc.)
             _ = data
     except WebSocketDisconnect:
+        manager.disconnect(project_id)
+    except Exception:
         manager.disconnect(project_id)

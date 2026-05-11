@@ -14,6 +14,11 @@ from app.core.errors import BasefloError
 from app.db.models import DataSource, SyncRun
 
 
+def _escape_ident(name: str) -> str:
+    """Escape an identifier for safe use in raw SQL."""
+    return '"' + name.replace('"', '""') + '"'
+
+
 class SyncEngine:
     """Orchestrates one sync run: read from source → write to raw table."""
 
@@ -49,6 +54,16 @@ class SyncEngine:
             source.status = "active"
             source.last_synced_at = datetime.now(UTC)
 
+            # Trigger brain pipeline after successful sync
+            # Brain failures should not mark sync as failed
+            try:
+                from app.brain.orchestrator import BrainOrchestrator
+                brain = BrainOrchestrator()
+                await brain.on_source_synced(str(source.id))
+            except Exception:
+                # TODO: log brain failure for observability
+                pass
+
         except Exception as exc:
             run.status = "failed"
             run.error_message = str(exc)
@@ -63,13 +78,16 @@ class SyncEngine:
         connector: Connector,
         table_schema: Any,
     ) -> int:
-        """Sync one table. Creates raw table if not exists, upserts rows."""
+        """Sync one table. Creates raw table if not exists, inserts rows."""
         raw_table_name = f"raw__{source.project_id.hex}__{table_schema.name}"
+        raw_table_quoted = _escape_ident(raw_table_name)
 
         # Ensure raw table exists (simple TEXT columns for MVP)
-        col_defs = ", ".join(f"{c.name} TEXT" for c in table_schema.columns)
+        col_defs = ", ".join(
+            f"{_escape_ident(c.name)} TEXT" for c in table_schema.columns
+        )
         ddl = f"""
-        CREATE TABLE IF NOT EXISTS {raw_table_name} (
+        CREATE TABLE IF NOT EXISTS {raw_table_quoted} (
             _baseflo_id SERIAL PRIMARY KEY,
             _baseflo_source_id TEXT,
             _baseflo_synced_at TIMESTAMPTZ DEFAULT NOW(),
@@ -85,30 +103,30 @@ class SyncEngine:
         BATCH_SIZE = 500
 
         async for row in connector.read(source.config, query):
-            record = {
+            record: dict[str, Any] = {
                 "_baseflo_source_id": row.source_id,
-                **{k: str(v) if v is not None else None for k, v in row.values.items()},
             }
+            for k, v in row.values.items():
+                record[k] = str(v) if v is not None else None
             batch.append(record)
             if len(batch) >= BATCH_SIZE:
-                count += await self._insert_batch(raw_table_name, batch)
+                count += await self._insert_batch(raw_table_quoted, batch)
                 batch.clear()
 
         if batch:
-            count += await self._insert_batch(raw_table_name, batch)
+            count += await self._insert_batch(raw_table_quoted, batch)
 
         return count
 
     async def _insert_batch(
-        self, table_name: str, rows: list[dict[str, Any]],
+        self, table_name_quoted: str, rows: list[dict[str, Any]],
     ) -> int:
         if not rows:
             return 0
-        # Simple insert for MVP; later use COPY or ON CONFLICT upsert
         keys = list(rows[0].keys())
-        cols = ", ".join(keys)
+        cols = ", ".join(_escape_ident(k) for k in keys)
         placeholders = ", ".join(f":{k}" for k in keys)
-        stmt = text(f"INSERT INTO {table_name} ({cols}) VALUES ({placeholders})")
+        stmt = text(f"INSERT INTO {table_name_quoted} ({cols}) VALUES ({placeholders})")
         for row in rows:
             await self._session.execute(stmt, row)
         return len(rows)
