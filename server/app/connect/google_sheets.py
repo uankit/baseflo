@@ -69,7 +69,7 @@ class GoogleSheetsConnector(Connector):
             "grant_type": "authorization_code",
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(GOOGLE_TOKEN_URL, data=payload)
             if resp.status_code != 200:
                 raise BasefloError(
@@ -95,7 +95,7 @@ class GoogleSheetsConnector(Connector):
             "grant_type": "refresh_token",
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(GOOGLE_TOKEN_URL, data=payload)
             resp.raise_for_status()
             return resp.json()
@@ -139,7 +139,7 @@ class GoogleSheetsConnector(Connector):
         access_token = config["credentials"]["access_token"]
         headers = {"Authorization": f"Bearer {access_token}"}
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             # Get spreadsheet metadata (sheet names)
             meta_url = f"{SHEETS_API_BASE}/{spreadsheet_id}?fields=properties.title,sheets.properties.title"
             resp = await client.get(meta_url, headers=headers)
@@ -204,7 +204,7 @@ class GoogleSheetsConnector(Connector):
         # In production, we'd store the mapping
         sheet_title = query.table.replace("_", " ").title()
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             # Get all values (no limit for MVP; Google Sheets has 5M cell limit anyway)
             range_a1 = f"{sheet_title}"
             values_url = f"{SHEETS_API_BASE}/{spreadsheet_id}/values/{range_a1}"
@@ -235,7 +235,7 @@ class GoogleSheetsConnector(Connector):
             spreadsheet_id = config["spreadsheet_id"]
             access_token = config["credentials"]["access_token"]
             headers = {"Authorization": f"Bearer {access_token}"}
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.get(
                     f"{SHEETS_API_BASE}/{spreadsheet_id}?fields=spreadsheetId",
                     headers=headers,
