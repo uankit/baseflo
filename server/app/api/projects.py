@@ -37,7 +37,7 @@ async def list_projects(
     """List all projects for the current organization."""
     async with open_session() as session:
         result = await session.execute(
-            select(Project).where(Project.organization_id == tenant.org_id)
+            select(Project).where(Project.organization_id == tenant.organization_id)
         )
         projects = result.scalars().all()
 
@@ -64,7 +64,7 @@ async def create_project(
     slug = body.name.lower().replace(" ", "-")[:50] + "-" + str(uuid4())[:8]
     async with open_session() as session:
         project = Project(
-            organization_id=tenant.org_id,
+            organization_id=tenant.organization_id,
             name=body.name,
             slug=slug,
         )
@@ -94,7 +94,7 @@ async def get_project(
                 error_code="BF-PROJ-001",
                 status_code=404,
             )
-        if project.organization_id != tenant.org_id:
+        if project.organization_id != tenant.organization_id:
             raise BasefloError(
                 message="Unauthorized",
                 error_code="BF-PROJ-002",
