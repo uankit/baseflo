@@ -168,13 +168,14 @@ export class Gateway {
       return resp.data;
     },
 
-    sync: async (sourceId: string): Promise<{ sync_run_id: string; status: string; rows_synced: number }> => {
+    sync: async (sourceId: string): Promise<{ sync_run_id: string; status: string; rows_synced: number; error_message: string | null }> => {
       const resp = await this.transport.request(
         { method: 'POST', path: `/api/v1/connectors/${sourceId}/sync` },
         z.object({
           sync_run_id: z.string().uuid(),
           status: z.string(),
           rows_synced: z.number().int(),
+          error_message: z.string().nullable(),
         }),
       );
       return resp.data;

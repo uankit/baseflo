@@ -222,6 +222,7 @@ async def sync_source(
         "sync_run_id": str(run.id),
         "status": run.status,
         "rows_synced": run.rows_synced,
+        "error_message": run.error_message,
         "started_at": run.started_at.isoformat(),
         "finished_at": run.finished_at.isoformat() if run.finished_at else None,
     }

@@ -9,6 +9,7 @@ interface ConnectorSetupProps {
 export function ConnectorSetup({ projectId }: ConnectorSetupProps) {
   const gateway = useGateway();
   const [spreadsheetId, setSpreadsheetId] = useState('');
+  const [lastSyncResult, setLastSyncResult] = useState<{ status: string; rows_synced: number; error_message: string | null } | null>(null);
 
   const connectorsQuery = useQuery({
     queryKey: ['connectors', projectId],
@@ -28,6 +29,10 @@ export function ConnectorSetup({ projectId }: ConnectorSetupProps) {
 
   const syncConnector = useMutation({
     mutationFn: (sourceId: string) => gateway.connectors.sync(sourceId),
+    onSuccess: (data) => {
+      setLastSyncResult(data);
+      connectorsQuery.refetch();
+    },
   });
 
   const handleOAuth = async () => {
@@ -103,6 +108,17 @@ export function ConnectorSetup({ projectId }: ConnectorSetupProps) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Sync result */}
+      {lastSyncResult && (
+        <div className={`rounded-lg p-3 text-xs ${lastSyncResult.status === 'success' ? 'bg-green-950/30 text-green-300 border border-green-900/50' : 'bg-red-950/30 text-red-300 border border-red-900/50'}`}>
+          <div className="font-medium">Sync {lastSyncResult.status}</div>
+          <div className="mt-1">Rows synced: {lastSyncResult.rows_synced}</div>
+          {lastSyncResult.error_message && (
+            <div className="mt-1 text-[10px] opacity-80">{lastSyncResult.error_message}</div>
+          )}
         </div>
       )}
     </div>

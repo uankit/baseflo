@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
@@ -12,6 +13,8 @@ from app.connect.base import Connector, SourceQuery
 from app.connect.registry import get as get_connector
 from app.core.errors import BasefloError
 from app.db.models import DataSource, SyncRun
+
+logger = logging.getLogger("baseflo.sync")
 
 
 def _escape_ident(name: str) -> str:
@@ -35,36 +38,45 @@ class SyncEngine:
         )
         self._session.add(run)
         await self._session.flush()
+        logger.info("[sync] started source=%s kind=%s project=%s", source.id, source.kind, source.project_id)
 
         try:
             connector = get_connector(source.kind)
+            logger.info("[sync] introspecting source=%s", source.id)
             schema = await connector.introspect(source.config)
+            logger.info("[sync] discovered %d tables for source=%s", len(schema.tables), source.id)
 
             total_rows = 0
             for table_schema in schema.tables:
+                logger.info("[sync] syncing table=%s for source=%s", table_schema.name, source.id)
                 rows = await self._sync_table(
                     source=source,
                     connector=connector,
                     table_schema=table_schema,
                 )
                 total_rows += rows
+                logger.info("[sync] table=%s synced %d rows for source=%s", table_schema.name, rows, source.id)
 
             run.status = "success"
             run.rows_synced = total_rows
             source.status = "active"
             source.last_synced_at = datetime.now(UTC)
+            logger.info("[sync] success source=%s rows=%d", source.id, total_rows)
 
             # Trigger brain pipeline after successful sync
-            # Brain failures should not mark sync as failed
+            logger.info("[sync] triggering brain for source=%s", source.id)
             try:
                 from app.brain.orchestrator import BrainOrchestrator
                 brain = BrainOrchestrator()
-                await brain.on_source_synced(str(source.id))
-            except Exception:
-                # TODO: log brain failure for observability
-                pass
+                insights = await brain.on_source_synced(str(source.id))
+                logger.info("[sync] brain finished source=%s insights=%d", source.id, len(insights))
+            except Exception as brain_exc:
+                logger.exception("[sync] brain FAILED for source=%s: %s", source.id, brain_exc)
+                # Don't mark sync as failed, but note it in the run
+                run.error_message = f"Sync OK but brain failed: {brain_exc}"
 
         except Exception as exc:
+            logger.exception("[sync] FAILED source=%s: %s", source.id, exc)
             run.status = "failed"
             run.error_message = str(exc)
             source.status = "error"
