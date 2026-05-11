@@ -66,11 +66,12 @@ class SyncEngine:
             logger.info("[sync] success source=%s rows=%d", source.id, total_rows)
 
             # Trigger brain pipeline after successful sync
+            # Pass our session so the brain can see the rows we just inserted
             logger.info("[sync] triggering brain for source=%s", source.id)
             try:
                 from app.brain.orchestrator import BrainOrchestrator
                 brain = BrainOrchestrator()
-                insights = await brain.on_source_synced(str(source.id))
+                insights = await brain.on_source_synced(str(source.id), session=self._session)
                 logger.info("[sync] brain finished source=%s insights=%d", source.id, len(insights))
             except Exception as brain_exc:
                 logger.exception("[sync] brain FAILED for source=%s: %s", source.id, brain_exc)

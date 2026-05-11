@@ -28,11 +28,21 @@ class BrainOrchestrator:
     def __init__(self) -> None:
         self.discovery = DiscoveryAgent()
 
-    async def on_source_synced(self, source_id: str) -> list[Insight]:
-        """Triggered after a successful sync. Runs the full brain pipeline."""
+    async def on_source_synced(self, source_id: str, session=None) -> list[Insight]:
+        """Triggered after a successful sync. Runs the full brain pipeline.
+
+        If `session` is provided, uses it (so the brain can see uncommitted
+        rows from the sync). Otherwise opens its own session.
+        """
         logger.info("[brain] starting pipeline for source=%s", source_id)
+        if session is not None:
+            return await self._run_pipeline(source_id, session)
         async with open_session() as session:
-            # 1. Load source + project
+            return await self._run_pipeline(source_id, session)
+
+    async def _run_pipeline(self, source_id: str, session) -> list[Insight]:
+        """Core pipeline logic."""
+        # 1. Load source + project
             result = await session.execute(
                 select(DataSource).where(DataSource.id == source_id)
             )
