@@ -12,6 +12,14 @@
 
 @source '../../../../packages/ui/src/**/*.{ts,tsx}';
 
+@theme {
+  --color-paper: #f5efe7;
+  --color-paper-soft: #fbf8f1;
+  --color-ink: #1c1914;
+  --color-flame: #dc5425;
+  --color-moss: #2e6f4e;
+}
+
 @layer base {
   html,
   body,

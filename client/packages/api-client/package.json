@@ -16,10 +16,6 @@
     "./transports/rest": {
       "types": "./src/transports/rest.ts",
       "import": "./src/transports/rest.ts"
-    },
-    "./transports/sse": {
-      "types": "./src/transports/sse.ts",
-      "import": "./src/transports/sse.ts"
     }
   },
   "scripts": {
@@ -29,7 +25,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.lib.json"
   },
   "dependencies": {
-    "@baseflo/contracts": "workspace:*",
     "@baseflo/error-system": "workspace:*",
     "zod": "4.0.0"
   },

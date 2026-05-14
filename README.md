@@ -2,25 +2,22 @@
 
 > Run your business from one place. Connected to what you already use.
 
-Baseflo is the agentic business operations layer. Connect existing tools (Excel, Notion, Postgres, Shopify, Stripe, Mailchimp, Zoho, or a custom internal system), and receive a unified schema agentically reconciled across sources, a hosted admin panel, typed REST + TypeScript SDK, behavioral analytics, and a daily digest. No migration. No backend code.
+Baseflo is the adaptive operating intelligence layer for a business. Connect existing tools (spreadsheets, databases, SaaS exports, Stripe, CRM, HR tools, support tools, or a custom internal system), and Baseflo learns the shape of the data, watches for meaningful change, explains why it matters, and proposes controlled next moves. No templates. No AI employee cosplay. Grounded intelligence first, governed action next.
 
-This repo is at **M0 — Foundation Reset** (2026-05-06). The pre-pivot codebase has been archived; the active tree is a clean slate built against the architecture and patterns locked in [`docs/00-decisions.md`](docs/00-decisions.md).
+The active product direction is captured in [`docs/ADAPTIVE-OPERATING-INTELLIGENCE.md`](docs/ADAPTIVE-OPERATING-INTELLIGENCE.md). Older planning docs may remain for historical reference, but executable code should follow the adaptive operating intelligence workflow.
 
 ## Where to start
 
-1. [`docs/00-decisions.md`](docs/00-decisions.md) — single source of truth for every locked decision. Read first.
-2. [`docs/01-architecture.md`](docs/01-architecture.md) — full system architecture: engine, agents, connectors, deployment modes.
-3. [`docs/05-coding-rules.md`](docs/05-coding-rules.md) — TDD-first, no LLM-wrapper, no regex/heuristics, layer boundaries, code review checklist.
-4. [`docs/31-todolist.md`](docs/31-todolist.md) — milestone-grouped build tasks, M0 onward.
+1. [`docs/ADAPTIVE-OPERATING-INTELLIGENCE.md`](docs/ADAPTIVE-OPERATING-INTELLIGENCE.md) — current product stance: problem, loop, surfaces, and engineering boundary.
+2. [`docs/05-coding-rules.md`](docs/05-coding-rules.md) — engineering guardrails.
 
 ## Repository structure
 
 | Directory | Purpose |
 |---|---|
-| [`docs/`](docs/) | Architecture, product, GTM, per-feature HLDs. Single source of truth. |
-| [`system_docs/`](system_docs/) | Legacy product blueprints + audit findings. Institutional memory. |
-| `server/` | Python FastAPI engine + agents + connector framework (M0 build target). |
-| `client/` | TypeScript / React monorepo: admin UI, marketing, contracts, error system. |
+| [`docs/`](docs/) | Product stance, architecture notes, and historical planning docs. |
+| `server/` | Python FastAPI engine: auth, connectors, substrate, ask, operating intelligence. |
+| `client/` | TypeScript / React monorepo for the hosted operating workspace. |
 | `sdk/ts/` | TypeScript SDK published as `@baseflo/sdk`. Generated from schema IR. |
 | `cli/` | Go single-binary CLI: `baseflo init`, `connect`, `dev`, `deploy`. |
 | `connectors/` | Per-connector plugin implementations (built-in + custom-authoring scaffold). |

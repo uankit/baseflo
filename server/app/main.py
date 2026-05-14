@@ -5,13 +5,14 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import router as api_router
 from app.config import get_settings
+from app.core.errors import AppError
 from app.db.session import engine
-from app.ws import router as ws_router
 
 settings = get_settings()
 
@@ -39,4 +40,15 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
-app.include_router(ws_router, prefix="/ws")
+
+
+@app.exception_handler(AppError)
+async def _app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_hint,
+        content={
+            "code": exc.code,
+            "message": exc.message,
+            "details": exc.details,
+        },
+    )

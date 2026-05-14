@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { useAuth } from '../features/auth/hooks/useAuth.js';
+import { Landing } from '../features/landing/Landing.js';
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -12,16 +13,18 @@ function HomePage() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (!isAuthenticated) {
-      navigate({ to: '/sign-in', replace: true });
-    } else {
+    if (isAuthenticated) {
       navigate({ to: '/welcome', replace: true });
     }
   }, [isLoading, isAuthenticated, navigate]);
 
-  return (
-    <div className="flex h-screen items-center justify-center bg-gray-950 text-gray-500 text-sm">
-      {isLoading ? 'Loading…' : 'Redirecting…'}
-    </div>
-  );
+  if (isLoading || isAuthenticated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg text-fg-subtle text-sm">
+        {isLoading ? 'Loading…' : 'Opening your workspace…'}
+      </div>
+    );
+  }
+
+  return <Landing />;
 }

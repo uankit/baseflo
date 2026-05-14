@@ -34,68 +34,206 @@ export function SignInView() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Baseflo</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            {step === 'email' ? 'Enter your email to sign in' : 'Enter your magic link token'}
+    <div className="flex min-h-screen bg-[#f4f1ea] text-[#1a1a1a] font-serif selection:bg-[#d95d39]/30">
+      
+      {/* Left Column */}
+      <div className="hidden lg:flex flex-1 border-r-2 border-black/20 p-12 flex-col justify-between max-w-[60%]">
+        
+        <div className="max-w-[700px] mx-auto w-full">
+          {/* Top Row */}
+          <div className="flex justify-between items-baseline mb-16 border-b border-black/20 pb-4">
+            <div className="text-3xl font-bold italic tracking-tight">baseflo<span className="text-[#d95d39]">.</span></div>
+            <div className="text-[11px] font-sans tracking-[0.2em] text-black/50 uppercase font-semibold">EDITION · SIGN-IN DESK</div>
+          </div>
+
+          {/* Headline */}
+          <div className="grid grid-cols-3 gap-8 text-[10px] font-sans tracking-widest text-black/50 uppercase mb-6">
+            <div>EST. ON<br/>CONNECT</div>
+            <div>FOR FOUNDERS, OPERATORS<br/>& TEAMS</div>
+            <div>ONE<br/>DECISION</div>
+          </div>
+          <h1 className="text-7xl xl:text-8xl font-bold tracking-tight mb-4">Welcome back<span className="text-[#d95d39]">.</span></h1>
+          <p className="text-xl italic text-black/70 mb-10 pb-10 border-b-2 border-black/80">
+            "Your edition is waiting. Sign in and we'll file it."
           </p>
+
+          {/* Columns */}
+          <div className="grid grid-cols-2 gap-12">
+            
+            {/* From the editor */}
+            <div>
+              <div className="text-[#d95d39] text-[10px] font-sans tracking-widest font-semibold uppercase mb-3">FROM THE EDITOR</div>
+              <h2 className="text-[22px] font-bold leading-tight mb-4 tracking-tight">An operating brief — filed by your data, not your team.</h2>
+              <div className="text-[15px] leading-relaxed text-black/80 mb-5">
+                <span className="float-left text-5xl font-bold leading-[0.8] mr-2 mt-1">B</span>
+                aseflo connects to the tools you already use, learns the shape of your business, and files a brief every morning. Headlines you can act on. Reasoning beneath each one. One-click moves that close the loop.
+              </div>
+              <p className="text-[15px] leading-relaxed text-black/80 mb-8">
+                No dashboards to build. No templates to pick. No "AI employee" cosplay.
+              </p>
+              
+              <div className="border-l-2 border-[#d95d39] pl-4 py-1">
+                <p className="text-[15px] italic text-black/90 mb-2">"Not a dashboard. Not a copilot. The state layer your business actually runs on."</p>
+                <div className="text-[9px] font-sans font-bold tracking-widest text-black/40 uppercase">— THE BASEFLO STANCE</div>
+              </div>
+            </div>
+            
+            {/* In today's edition */}
+            <div>
+              <div className="text-[#d95d39] text-[10px] font-sans tracking-widest font-semibold uppercase mb-3">IN TODAY'S EDITION</div>
+              <h3 className="text-lg font-bold leading-tight mb-6">A sample of what's waiting once you sign in:</h3>
+              
+              <div className="mb-5">
+                <h4 className="font-bold text-[15px] mb-1 leading-snug">Bangalore quietly outpaces Mumbai 3-to-1</h4>
+                <div className="text-xs italic text-black/50">delivery speed · cross-source · high confidence</div>
+              </div>
+              <div className="mb-5">
+                <h4 className="font-bold text-[15px] mb-1 leading-snug">Forty-seven people read your emails but never buy</h4>
+                <div className="text-xs italic text-black/50">engaged-dormant cohort · ₹1.13L LTV</div>
+              </div>
+              <div className="mb-5">
+                <h4 className="font-bold text-[15px] mb-1 leading-snug">Five SKUs will run out before reorder lands</h4>
+                <div className="text-xs italic text-black/50">8 days of cover · 14d lead time · urgent</div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
-        {step === 'email' ? (
-          <form onSubmit={handleRequest} className="space-y-4">
-            <input
-              type="email"
-              required
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-gray-600"
-            />
-            <button
-              type="submit"
-              disabled={requestMagicLink.isPending}
-              className="w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-950 hover:bg-gray-100 disabled:opacity-50"
-            >
-              {requestMagicLink.isPending ? 'Sending…' : 'Send Magic Link'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerify} className="space-y-4">
-            <div className="rounded-lg border border-yellow-900/50 bg-yellow-950/30 p-3 text-xs text-yellow-200">
-              For MVP, the token is shown below. Copy it and paste above.
-            </div>
-            <input
-              type="text"
-              required
-              placeholder="Paste token here"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="w-full rounded-lg border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-gray-600"
-            />
-            <button
-              type="submit"
-              disabled={verifyMagicLink.isPending}
-              className="w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-950 hover:bg-gray-100 disabled:opacity-50"
-            >
-              {verifyMagicLink.isPending ? 'Verifying…' : 'Verify & Sign In'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep('email')}
-              className="w-full text-center text-xs text-gray-500 hover:text-gray-300"
-            >
-              Use a different email
-            </button>
-          </form>
-        )}
+        {/* Footer */}
+        <div className="max-w-[700px] mx-auto w-full text-[11px] font-sans text-black/50 flex gap-4 mt-16 pt-4 border-t border-black/10">
+          <span>© Baseflo, 2026</span>
+          <span>·</span>
+          <a href="#" className="hover:text-black border-b border-black/20 pb-0.5">&larr; back to landing</a>
+          <span>·</span>
+          <a href="#" className="hover:text-black">security</a>
+          <a href="#" className="hover:text-black">privacy</a>
+          <a href="#" className="hover:text-black">status</a>
+        </div>
+      </div>
+      
+      {/* Right Column */}
+      <div className="flex-1 p-6 md:p-12 flex flex-col items-center justify-center relative bg-[#f4f1ea]">
+        
+        <div className="absolute top-12 right-12 text-[11px] font-sans text-black/50 hidden md:block">
+          no account? <a href="#" className="hover:text-black border-b border-black/20 pb-0.5">request access</a>
+        </div>
 
-        {error && (
-          <div className="rounded-lg bg-red-950/50 p-3 text-xs text-red-300">
-            {error}
+        <div className="relative w-full max-w-[420px]">
+          
+          {/* Passwordless sticker */}
+          <div className="absolute -top-6 -right-6 md:-right-8 rotate-6 bg-[#f4f1ea] border border-[#d95d39] px-4 py-2 shadow-sm z-10 hidden sm:block">
+            <div className="text-[#d95d39] font-serif italic text-lg leading-none">passwordless</div>
+            <div className="text-[9px] font-sans text-black/60 uppercase tracking-wide mt-1">no password, ever</div>
           </div>
-        )}
+
+          <div className="bg-white border-2 border-black/80 shadow-[6px_6px_0px_rgba(0,0,0,0.15)] p-8 sm:p-10 relative z-0">
+            <div className="text-center mb-8">
+              <div className="text-[10px] font-sans font-semibold tracking-[0.2em] text-black/40 uppercase mb-3">SIGN IN TO BASEFLO</div>
+              <h2 className="text-[40px] font-bold tracking-tight mb-2">Sign in</h2>
+              <p className="text-[15px] italic text-black/60">We'll send a magic link to your inbox.</p>
+              <div className="border-b-4 border-black/20 w-full mt-6"></div>
+            </div>
+
+            {step === 'email' ? (
+              <form onSubmit={handleRequest} className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-sans font-semibold tracking-widest text-black/50 uppercase mb-2">WORK EMAIL</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="you@company.com" 
+                    className="w-full border-2 border-black/80 bg-[#f8f6f0] px-4 py-3.5 text-[15px] font-serif italic placeholder:text-black/40 outline-none focus:border-[#d95d39]"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={requestMagicLink.isPending}
+                  className="w-full bg-[#d95d39] text-white font-sans font-bold py-3.5 border-2 border-black/80 shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all flex justify-center items-center gap-2"
+                >
+                  {requestMagicLink.isPending ? 'sending...' : 'send magic link ➔'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerify} className="space-y-6">
+                <div className="bg-[#f8f6f0] border border-[#d95d39]/40 p-4 text-[13px] italic text-black/70">
+                  Check your email for the magic link. <br/>
+                  <span className="text-[11px] text-black/50">(In dev, token is in server logs)</span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-sans font-semibold tracking-widest text-black/50 uppercase mb-2">MAGIC TOKEN</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={token}
+                    onChange={e => setToken(e.target.value)}
+                    placeholder="Paste token here" 
+                    className="w-full border-2 border-black/80 bg-[#f8f6f0] px-4 py-3.5 text-[15px] font-mono placeholder:text-black/40 outline-none focus:border-[#d95d39]"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={verifyMagicLink.isPending}
+                  className="w-full bg-[#d95d39] text-white font-sans font-bold py-3.5 border-2 border-black/80 shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all flex justify-center items-center gap-2"
+                >
+                  {verifyMagicLink.isPending ? 'verifying...' : 'verify & sign in ➔'}
+                </button>
+                <button type="button" onClick={() => setStep('email')} className="w-full text-center text-xs text-black/50 hover:text-black/80 italic">
+                  Use a different email
+                </button>
+              </form>
+            )}
+
+            {error && (
+              <div className="mt-4 border border-red-800/40 bg-red-50 p-3 text-xs text-red-800">
+                {error}
+              </div>
+            )}
+
+            <div className="mt-8 flex items-center gap-4">
+              <div className="flex-1 border-t border-black/20"></div>
+              <div className="text-[11px] font-serif italic text-black/50">or continue with</div>
+              <div className="flex-1 border-t border-black/20"></div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button className="w-full border-2 border-black/40 bg-[#f8f6f0] hover:bg-black/5 px-4 py-3 flex items-center justify-between group transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#1a73e8] text-white w-6 h-6 flex items-center justify-center text-[11px] font-bold font-sans rounded-sm">G</div>
+                  <span className="text-[15px] text-black/80">Continue with Google</span>
+                </div>
+                <span className="text-black/30 group-hover:text-black/80 transition-colors">➔</span>
+              </button>
+              <button className="w-full border-2 border-black/40 bg-[#f8f6f0] hover:bg-black/5 px-4 py-3 flex items-center justify-between group transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#24292e] text-white w-6 h-6 flex items-center justify-center text-[11px] font-bold font-sans rounded-sm">GH</div>
+                  <span className="text-[15px] text-black/80">Continue with GitHub</span>
+                </div>
+                <span className="text-black/30 group-hover:text-black/80 transition-colors">➔</span>
+              </button>
+              <button className="w-full border-2 border-black/40 bg-[#f8f6f0] hover:bg-black/5 px-4 py-3 flex items-center justify-between group transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#00a4ef] text-white w-6 h-6 flex items-center justify-center text-[11px] font-bold font-sans rounded-sm">MS</div>
+                  <span className="text-[15px] text-black/80">Continue with Microsoft</span>
+                </div>
+                <span className="text-black/30 group-hover:text-black/80 transition-colors">➔</span>
+              </button>
+            </div>
+
+            <div className="mt-10 text-center">
+              <p className="text-[13px] text-black/60 leading-relaxed mb-4">
+                New to Baseflo? <span className="text-[#d95d39]">enter your email above</span> — we'll create your workspace when the link is clicked.
+              </p>
+              <p className="text-[11px] italic text-black/50 leading-relaxed">
+                By continuing you agree to our <a href="#" className="border-b border-black/30 pb-0.5 hover:text-black">terms</a> and <a href="#" className="border-b border-black/30 pb-0.5 hover:text-black">privacy notice</a>.<br/>
+                Sessions are encrypted & expire after 30 days of inactivity.
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

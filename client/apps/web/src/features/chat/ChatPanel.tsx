@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import { useChat } from './useChat.js';
 
-interface ChatPanelProps {
-  projectId: string;
-}
-
-export function ChatPanel({ projectId }: ChatPanelProps) {
-  const { messages, sendMessage, isLoading } = useChat(projectId);
+export function ChatPanel() {
+  const { messages, sendMessage, isLoading } = useChat();
   const [input, setInput] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,10 +37,10 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
               }`}
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
-              {msg.sql && (
-                <pre className="mt-2 overflow-x-auto rounded bg-gray-950 p-2 text-[10px] text-gray-500">
-                  {msg.sql}
-                </pre>
+              {typeof msg.toolCalls === 'number' && msg.toolCalls > 0 && (
+                <div className="mt-2 border-t border-gray-800 pt-2 text-[10px] uppercase tracking-[0.12em] text-gray-600">
+                  {msg.toolCalls} tool calls
+                </div>
               )}
             </div>
           </div>

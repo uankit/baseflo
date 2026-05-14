@@ -6,15 +6,16 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  sql?: string | null;
+  toolCalls?: number;
+  artifacts?: Array<Record<string, unknown>>;
 }
 
-export function useChat(projectId: string) {
+export function useChat() {
   const gateway = useGateway();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const askMutation = useMutation({
-    mutationFn: (question: string) => gateway.query.ask({ project_id: projectId, question }),
+    mutationFn: (question: string) => gateway.query.ask({ question }),
   });
 
   const sendMessage = useCallback(
@@ -32,7 +33,8 @@ export function useChat(projectId: string) {
           id: Math.random().toString(36).slice(2),
           role: 'assistant',
           content: resp.answer,
-          sql: resp.sql,
+          toolCalls: resp.tool_calls.length,
+          artifacts: resp.artifacts,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (err) {

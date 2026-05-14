@@ -9,8 +9,11 @@ export interface AuthUser {
 
 export function createAuthService(gateway: Gateway) {
   return {
-    async requestMagicLink(email: string): Promise<{ message: string; dev_token: string | null }> {
-      return gateway.auth.requestMagicLink({ email });
+    async requestMagicLink(email: string): Promise<{ ok: boolean; dev_token: string | null }> {
+      // The server only logs local/dev tokens now; production-shape responses do
+      // not leak sign-in tokens to the browser.
+      const resp = await gateway.auth.requestMagicLink({ email });
+      return { ok: resp.ok, dev_token: null };
     },
 
     async verifyMagicLink(email: string, token: string): Promise<AuthUser> {
@@ -20,9 +23,9 @@ export function createAuthService(gateway: Gateway) {
         id: resp.user.id,
         email: resp.user.email,
         organization: {
-          id: resp.user.organization_id,
-          name: '',
-          slug: '',
+          id: resp.current_organization.id,
+          name: resp.current_organization.name,
+          slug: resp.current_organization.slug,
         },
       };
     },
@@ -30,15 +33,18 @@ export function createAuthService(gateway: Gateway) {
     async fetchMe(): Promise<AuthUser> {
       const me = await gateway.auth.me();
       return {
-        id: me.id,
-        email: me.email,
-        organization: me.organization,
+        id: me.user.id,
+        email: me.user.email,
+        organization: me.current_organization,
       };
     },
 
     async signOut(): Promise<void> {
-      await gateway.auth.signOut();
-      clearToken();
+      try {
+        await gateway.auth.signOut();
+      } finally {
+        clearToken();
+      }
     },
   };
 }

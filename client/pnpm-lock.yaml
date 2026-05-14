@@ -31,9 +31,6 @@ importers:
       '@baseflo/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
-      '@baseflo/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@baseflo/error-system':
         specifier: workspace:*
         version: link:../../packages/error-system
@@ -125,9 +122,6 @@ importers:
 
   packages/api-client:
     dependencies:
-      '@baseflo/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@baseflo/error-system':
         specifier: workspace:*
         version: link:../error-system
@@ -183,22 +177,6 @@ importers:
       typescript:
         specifier: 5.7.2
         version: 5.7.2
-
-  packages/contracts:
-    dependencies:
-      zod:
-        specifier: 4.0.0
-        version: 4.0.0
-    devDependencies:
-      '@baseflo/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: 5.7.2
-        version: 5.7.2
-      vitest:
-        specifier: 3.0.4
-        version: 3.0.4(@types/node@22.10.2)(happy-dom@16.5.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0)
 
   packages/error-system:
     devDependencies:

@@ -1,0 +1,771 @@
+/*
+ * Landing-page styles — editorial broadsheet aesthetic.
+ *
+ * Self-contained: all tokens scoped to `.bf-landing` so the warm-paper
+ * palette and serif typography cannot leak into the in-app product surfaces
+ * (which intentionally use a different, functional design system in
+ * @baseflo/ui/tokens.css). This file is imported only by Landing.tsx —
+ * TanStack Router's autoCodeSplitting keeps it off the critical path for
+ * authenticated routes.
+ */
+
+.bf-landing {
+  /* Paper palette — three values give us card-on-page depth without leaving the warm-paper family. */
+  --paper: #f5efe0;
+  --paper-soft: #faf7f0;
+  --paper-deep: #ece4d0;
+
+  /* Ink scale — body text and progressively quieter labels. */
+  --ink: #1a1612;
+  --ink-2: #3d3325;
+  --ink-3: #6b5d49;
+  --ink-4: #9a8a72;
+
+  /* Pencil tones — hand-drawn shadow stand-ins. */
+  --pencil-2: rgba(26, 22, 18, 0.22);
+  --rule: rgba(26, 22, 18, 0.18);
+
+  /* The single warm accent — every call-to-action and editorial highlight. */
+  --accent: #d4571f;
+  --accent-soft: #f7e2cc;
+
+  /* Semantic — only for is/isn't ticks. */
+  --good: #2a7a3e;
+  --bad: #b8331a;
+
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(0, 0, 0, 0.012) 0, transparent 55%),
+    radial-gradient(circle at 82% 88%, rgba(0, 0, 0, 0.018) 0, transparent 55%);
+  min-height: 100%;
+}
+
+.bf-landing * {
+  box-sizing: border-box;
+}
+
+.bf-landing .page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 48px 64px;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────────────── */
+.bf-landing .topbar {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+.bf-landing .brand {
+  font-family: 'Caveat', cursive;
+  font-size: 28px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.bf-landing .brand .dot {
+  color: var(--accent);
+  font-size: 32px;
+  line-height: 0;
+}
+.bf-landing .nav {
+  display: flex;
+  gap: 22px;
+  margin-left: 12px;
+  flex-wrap: wrap;
+}
+.bf-landing .nav a {
+  font-family: 'EB Garamond', serif;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  text-decoration: none;
+  letter-spacing: 0.2px;
+  transition: color 120ms ease;
+}
+.bf-landing .nav a:hover {
+  color: var(--accent);
+}
+.bf-landing .top-cta {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.bf-landing .top-cta .signin {
+  font-family: 'EB Garamond', serif;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+.bf-landing .top-cta .signin:hover {
+  color: var(--accent);
+}
+.bf-landing .top-cta .btn-lg {
+  padding: 8px 16px;
+  font-size: 14.5px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* ── Masthead ─────────────────────────────────────────────────────────── */
+.bf-landing .masthead {
+  padding: 28px 0 22px;
+  border-bottom: 3px double var(--ink);
+  text-align: center;
+}
+.bf-landing .masthead-rule {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: 'EB Garamond', serif;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  gap: 16px;
+}
+.bf-landing .masthead h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 110px;
+  line-height: 0.95;
+  letter-spacing: -2px;
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-weight: 400;
+}
+.bf-landing .masthead h1 .accent-dot {
+  color: var(--accent);
+}
+.bf-landing .masthead .deck {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 19px;
+  color: var(--ink-2);
+  margin-top: 6px;
+}
+
+/* ── Lede ─────────────────────────────────────────────────────────────── */
+.bf-landing .lede {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 56px;
+  padding: 32px 0 28px;
+  border-bottom: 1px solid var(--rule);
+}
+.bf-landing .lede-headline {
+  font-family: 'DM Serif Display', serif;
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+.bf-landing .lede-headline .accent {
+  color: var(--accent);
+  font-style: italic;
+}
+.bf-landing .lede-body {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.bf-landing .lede-body p {
+  margin: 0 0 12px;
+}
+.bf-landing .lede-body .dropcap::first-letter {
+  font-family: 'DM Serif Display', serif;
+  float: left;
+  font-size: 52px;
+  line-height: 0.85;
+  padding: 6px 8px 0 0;
+  color: var(--ink);
+}
+.bf-landing .lede-cta {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+.bf-landing .btn-lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border: 1.4px solid var(--ink);
+  background: var(--accent);
+  color: white;
+  font-family: 'EB Garamond', serif;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 2px;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  cursor: pointer;
+}
+.bf-landing .btn-lg:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.bf-landing .btn-lg.ghost {
+  background: transparent;
+  color: var(--ink);
+}
+.bf-landing .btn-lg .arr {
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  line-height: 0;
+}
+.bf-landing .small-note {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+
+/* ── Section primitives ──────────────────────────────────────────────── */
+.bf-landing .section {
+  padding: 38px 0 32px;
+  border-bottom: 1px solid var(--rule);
+}
+.bf-landing .section-label {
+  font-family: 'EB Garamond', serif;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.bf-landing .section-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 36px;
+  line-height: 1.05;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  margin: 0 0 10px;
+  font-weight: 400;
+}
+.bf-landing .section-deck {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink-3);
+  max-width: 720px;
+  margin: 0 0 24px;
+}
+
+/* ── The Loop ─────────────────────────────────────────────────────────── */
+.bf-landing .loop {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+  margin-top: 8px;
+}
+.bf-landing .loop-step {
+  padding: 0 16px 4px;
+  border-right: 1px solid var(--rule);
+  position: relative;
+}
+.bf-landing .loop-step:last-child {
+  border-right: none;
+}
+.bf-landing .loop-step:first-child {
+  padding-left: 0;
+}
+.bf-landing .loop-num {
+  font-family: 'Caveat', cursive;
+  font-size: 38px;
+  color: var(--accent);
+  line-height: 1;
+  font-weight: 600;
+}
+.bf-landing .loop-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  margin: 2px 0 6px;
+}
+.bf-landing .loop-desc {
+  font-family: 'EB Garamond', serif;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.bf-landing .loop-arrow {
+  position: absolute;
+  right: -8px;
+  top: 18px;
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  color: var(--accent);
+}
+.bf-landing .loop-step:last-child .loop-arrow {
+  display: none;
+}
+
+/* ── Sample Edition ───────────────────────────────────────────────────── */
+.bf-landing .edition {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 44px;
+  align-items: stretch;
+}
+.bf-landing .edition-copy h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 34px;
+  line-height: 1.05;
+  margin: 0 0 12px;
+  font-weight: 400;
+}
+.bf-landing .edition-copy p {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0 0 12px;
+}
+.bf-landing .edition-bullets {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bf-landing .edition-bullets li {
+  font-family: 'EB Garamond', serif;
+  font-size: 15px;
+  color: var(--ink-2);
+  padding-left: 22px;
+  position: relative;
+}
+.bf-landing .edition-bullets li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+  font-family: 'Caveat', cursive;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+/* ── Mini "edition" preview card ─────────────────────────────────────── */
+.bf-landing .preview {
+  background: var(--paper-soft);
+  border: 1.4px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--pencil-2);
+  padding: 18px 22px 20px;
+  position: relative;
+}
+.bf-landing .preview-stamp {
+  position: absolute;
+  right: -14px;
+  top: 18px;
+  transform: rotate(8deg);
+  font-family: 'Caveat', cursive;
+  color: var(--accent);
+  font-size: 22px;
+  background: var(--paper);
+  border: 1.4px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 12px;
+  box-shadow: 2px 2px 0 var(--pencil-2);
+}
+.bf-landing .preview-mast {
+  text-align: center;
+  border-bottom: 3px double var(--ink);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+.bf-landing .preview-mast .top {
+  font-family: 'EB Garamond', serif;
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  color: var(--ink-3);
+  display: flex;
+  justify-content: space-between;
+  text-transform: uppercase;
+}
+.bf-landing .preview-mast .title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 30px;
+  line-height: 1;
+  margin-top: 2px;
+}
+.bf-landing .preview-mast .sub {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.bf-landing .preview-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+.bf-landing .preview-col {
+  min-width: 0;
+}
+.bf-landing .preview-tag {
+  font-family: 'EB Garamond', serif;
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.bf-landing .preview-tag.bordered {
+  border-bottom: 1.2px solid var(--ink);
+  padding-bottom: 3px;
+}
+.bf-landing .preview-tag.bordered.spaced {
+  margin-top: 10px;
+}
+.bf-landing .preview-lead {
+  font-family: 'DM Serif Display', serif;
+  font-size: 19px;
+  line-height: 1.05;
+  margin-bottom: 6px;
+}
+.bf-landing .preview-lead.sm {
+  font-size: 16px;
+}
+.bf-landing .preview-body {
+  font-family: 'EB Garamond', serif;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  text-align: justify;
+}
+.bf-landing .preview-body.dc::first-letter {
+  font-family: 'DM Serif Display', serif;
+  float: left;
+  font-size: 26px;
+  line-height: 0.85;
+  padding: 3px 4px 0 0;
+}
+.bf-landing .preview-rule {
+  height: 1px;
+  background: var(--rule);
+  margin: 10px 0;
+}
+.bf-landing .preview-side .row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dotted var(--rule);
+  padding: 4px 0;
+  font-size: 11px;
+}
+.bf-landing .preview-side .row:last-of-type {
+  border-bottom: none;
+}
+.bf-landing .preview-side .row .v {
+  font-family: 'DM Serif Display', serif;
+  font-size: 13px;
+}
+.bf-landing .preview-side .row .v.accent {
+  color: var(--accent);
+}
+.bf-landing .preview-side .overnight {
+  font-family: 'EB Garamond', serif;
+  margin: 4px 0 0;
+  line-height: 1.5;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.bf-landing .preview-foot {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 3px double var(--ink);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.bf-landing .preview-foot .lab {
+  font-family: 'DM Serif Display', serif;
+  font-size: 12px;
+}
+.bf-landing .preview-foot .chip-mini {
+  font-family: 'EB Garamond', serif;
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* ── Pull quote ───────────────────────────────────────────────────────── */
+.bf-landing .pull {
+  text-align: center;
+  padding: 44px 64px;
+  border-bottom: 1px solid var(--rule);
+}
+.bf-landing .pull-quote {
+  font-family: 'DM Serif Display', serif;
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+}
+.bf-landing .pull-quote .accent {
+  color: var(--accent);
+}
+.bf-landing .pull-attr {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-3);
+  margin-top: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* ── Sources grid ─────────────────────────────────────────────────────── */
+.bf-landing .sources {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-top: 6px;
+}
+.bf-landing .source-card {
+  border: 1.2px solid var(--ink);
+  background: var(--paper-soft);
+  padding: 14px 14px 12px;
+  box-shadow: 3px 3px 0 var(--pencil-2);
+  position: relative;
+}
+.bf-landing .source-card .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+}
+.bf-landing .b-shopify { background: #1a4d2e; }
+.bf-landing .b-stripe  { background: #5a4ce0; }
+.bf-landing .b-mail    { background: #d4a017; color: var(--ink); }
+.bf-landing .b-pg      { background: #2d5a8a; }
+.bf-landing .b-sheets  { background: #167a4a; }
+.bf-landing .b-excel   { background: #1a6a3e; }
+.bf-landing .b-csv     { background: var(--ink); }
+.bf-landing .b-hubspot { background: #e35d3b; }
+.bf-landing .b-stack   { background: #b8331a; }
+.bf-landing .b-custom  {
+  background: var(--ink-3);
+  border: 1.2px dashed var(--ink);
+  color: var(--paper);
+}
+.bf-landing .source-card .name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 17px;
+  margin-top: 8px;
+}
+.bf-landing .source-card .kind {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 1px;
+}
+.bf-landing .sources-more {
+  margin-top: 18px;
+}
+
+/* ── Stance · is / isn't ──────────────────────────────────────────────── */
+.bf-landing .stance {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-top: 12px;
+  border: 1.4px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--pencil-2);
+  background: var(--paper-soft);
+}
+.bf-landing .stance-col {
+  padding: 22px 24px;
+}
+.bf-landing .stance-col + .stance-col {
+  border-left: 1px solid var(--rule);
+}
+.bf-landing .stance h4 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  margin: 0 0 12px;
+  font-weight: 400;
+}
+.bf-landing .stance ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bf-landing .stance li {
+  font-family: 'EB Garamond', serif;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--ink-2);
+  padding-left: 22px;
+  position: relative;
+}
+.bf-landing .stance .isnt li::before {
+  content: '✕';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--bad);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+.bf-landing .stance .is li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--good);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+.bf-landing .stance .is h4 {
+  color: var(--accent);
+}
+
+/* ── Closing CTA ──────────────────────────────────────────────────────── */
+.bf-landing .closer {
+  padding: 52px 0 12px;
+  text-align: center;
+}
+.bf-landing .closer h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 50px;
+  line-height: 1;
+  letter-spacing: -0.6px;
+  margin: 0;
+  font-weight: 400;
+}
+.bf-landing .closer p {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-3);
+  margin: 12px 0 22px;
+}
+.bf-landing .closer .cta-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.bf-landing .closer .scribble-row {
+  margin-top: 22px;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+.bf-landing .foot {
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: 3px double var(--ink);
+  display: flex;
+  justify-content: space-between;
+  font-family: 'EB Garamond', serif;
+  font-size: 13px;
+  color: var(--ink-3);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.bf-landing .foot .links {
+  display: flex;
+  gap: 18px;
+}
+.bf-landing .foot a {
+  color: var(--ink-3);
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+.bf-landing .foot a:hover {
+  color: var(--accent);
+}
+
+/* ── Tiny marginalia annotations ─────────────────────────────────────── */
+.bf-landing .scribble-note {
+  font-family: 'Caveat', cursive;
+  font-size: 17px;
+  color: var(--accent);
+  line-height: 1.1;
+}
+
+/* ── Responsive fallbacks ────────────────────────────────────────────────
+ * The print prototype is a fixed 1280px broadsheet. We don't redesign for
+ * mobile (that's a separate scope) but we collapse the worst overflows so
+ * narrow viewports stay readable rather than horizontal-scrolling. */
+@media (max-width: 960px) {
+  .bf-landing .page {
+    padding: 0 24px 48px;
+  }
+  .bf-landing .masthead h1 {
+    font-size: 72px;
+    letter-spacing: -1px;
+  }
+  .bf-landing .lede,
+  .bf-landing .edition,
+  .bf-landing .stance {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .bf-landing .stance-col + .stance-col {
+    border-left: none;
+    border-top: 1px solid var(--rule);
+  }
+  .bf-landing .loop {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px 0;
+  }
+  .bf-landing .loop-step {
+    border-right: none;
+    padding: 0 12px;
+  }
+  .bf-landing .loop-step:nth-child(odd) {
+    border-right: 1px solid var(--rule);
+  }
+  .bf-landing .loop-arrow {
+    display: none;
+  }
+  .bf-landing .sources {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bf-landing .pull {
+    padding: 32px 16px;
+  }
+  .bf-landing .pull-quote {
+    font-size: 26px;
+  }
+  .bf-landing .closer h2 {
+    font-size: 36px;
+  }
+  .bf-landing .masthead-rule {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    text-align: center;
+  }
+}

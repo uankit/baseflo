@@ -1,55 +1,102 @@
 import React from 'react';
-import { useAuth } from '../features/auth/hooks/useAuth.js';
+import { IconDatabase, IconLogOut, IconSparkles, IconZap } from '@baseflo/ui/icons';
 
 interface AppShellProps {
   children: React.ReactNode;
+  activeTab?: 'sources' | 'brief' | 'ask' | 'inbox';
+  onTabChange?: (tab: 'sources' | 'brief' | 'ask' | 'inbox') => void;
+  lastSyncedLabel?: string;
+  openInsights?: number;
+  proposedActions?: number;
+  onSignOut?: () => void;
+  isSigningOut?: boolean;
 }
 
-export function AppShell({ children }: AppShellProps) {
-  const { user, signOut } = useAuth();
+const tabs: Array<{ id: 'brief' | 'inbox' | 'ask' | 'sources'; label: string }> = [
+  { id: 'brief', label: 'Brief' },
+  { id: 'inbox', label: 'Inbox' },
+  { id: 'ask', label: 'Ask' },
+  { id: 'sources', label: 'Sources' },
+];
 
+export function AppShell({
+  children,
+  activeTab = 'brief',
+  onTabChange,
+  lastSyncedLabel,
+  openInsights = 0,
+  proposedActions = 0,
+  onSignOut,
+  isSigningOut = false,
+}: AppShellProps) {
   return (
-    <div className="flex h-screen bg-gray-950 text-gray-100">
-      {/* Sidebar */}
-      <aside className="flex w-56 flex-col border-r border-gray-800 bg-gray-950">
-        <div className="flex h-14 items-center px-4">
-          <span className="text-lg font-semibold tracking-tight text-white">Baseflo</span>
+    <div className="flex min-h-screen flex-col bg-paper text-ink selection:bg-flame/25">
+      <header className="sticky top-0 z-50 flex shrink-0 items-center justify-between gap-4 border-b border-ink/20 bg-paper/95 px-5 py-3 backdrop-blur">
+        <div className="flex min-w-0 items-baseline gap-5">
+          <button
+            type="button"
+            className="flex items-baseline gap-2"
+            onClick={() => onTabChange?.('brief')}
+          >
+            <span className="font-serif text-[22px] font-bold italic tracking-tight">
+              baseflo<span className="text-flame">.</span>
+            </span>
+          </button>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange?.(tab.id)}
+                className={`px-3 py-1.5 font-serif text-[17px] italic transition ${
+                  activeTab === tab.id
+                    ? 'bg-ink text-paper shadow-[2px_2px_0_rgba(220,84,37,0.9)]'
+                    : 'text-ink/55 hover:bg-white/60 hover:text-ink'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <nav className="flex-1 px-3 py-2 space-y-1">
-          <a
-            href="/"
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-900 hover:text-white"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-            Insights
-          </a>
-          <a
-            href="/connectors"
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-900 hover:text-white"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" /></svg>
-            Connectors
-          </a>
-        </nav>
-
-        <div className="border-t border-gray-800 p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-400 truncate">
-              {user?.email}
-            </div>
-            <button
-              onClick={() => signOut.mutate()}
-              className="text-xs text-gray-500 hover:text-gray-300"
-            >
-              Log out
-            </button>
-          </div>
+        <div className="flex shrink-0 items-center gap-3 font-sans text-[11px] tracking-wide text-ink/60">
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <IconSparkles className="h-3.5 w-3.5 text-flame" />
+            <strong className="text-ink">{openInsights}</strong> reads
+          </span>
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <IconZap className="h-3.5 w-3.5 text-flame" />
+            <strong className="text-ink">{proposedActions}</strong> actions
+          </span>
+          <span className="hidden h-4 w-px bg-ink/20 sm:block" />
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" aria-hidden />
+            <span className="font-semibold uppercase tracking-wider text-ink">live</span>
+          </span>
+          {lastSyncedLabel ? (
+            <span className="hidden text-ink/45 sm:inline">· {lastSyncedLabel}</span>
+          ) : null}
+          <IconDatabase className="hidden h-3.5 w-3.5 text-ink/35 lg:block" />
+          {onSignOut ? (
+            <>
+              <span className="hidden h-4 w-px bg-ink/20 sm:block" />
+              <button
+                type="button"
+                onClick={onSignOut}
+                disabled={isSigningOut}
+                className="inline-flex items-center gap-1.5 border border-ink/30 px-2 py-1 font-semibold uppercase tracking-wider text-ink transition hover:border-flame hover:text-flame disabled:cursor-wait disabled:opacity-50"
+                aria-label="Sign out"
+              >
+                <IconLogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{isSigningOut ? 'leaving' : 'logout'}</span>
+              </button>
+            </>
+          ) : null}
         </div>
-      </aside>
+      </header>
 
-      {/* Main */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 w-full overflow-auto">
         {children}
       </main>
     </div>

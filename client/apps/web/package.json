@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@baseflo/api-client": "workspace:*",
-    "@baseflo/contracts": "workspace:*",
     "@baseflo/error-system": "workspace:*",
     "@baseflo/ui": "workspace:*",
     "@hookform/resolvers": "3.10.0",

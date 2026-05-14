@@ -1,0 +1,32 @@
+# Workspace-level Python venv (uv creates this when syncing the workspace root)
+.venv/
+
+# Python tooling caches (may appear at root when running from workspace)
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+
+# Node tooling at root (pnpm store, turbo cache)
+.pnpm-store/
+.turbo/
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Local analytical substrate (DuckDB files, per-org)
+data/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+
+# Logs
+*.log

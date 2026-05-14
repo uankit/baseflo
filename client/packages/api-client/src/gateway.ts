@@ -1,22 +1,145 @@
 import { z } from 'zod';
-import {
-  type Insight,
-  type InsightListResponse,
-  type InsightStatsResponse,
-  InsightListResponseSchema,
-  InsightStatsResponseSchema,
-  type MagicLinkConsume,
-  type MagicLinkRequest,
-  type Session,
-} from '@baseflo/contracts';
-import type { Transport, TransportRequest } from './transports/base.js';
+import type { Transport } from './transports/base.js';
 
 export interface GatewayConfig {
   transport: Transport;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  status: string;
+}
+
+export interface AuthOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  plan?: string;
+}
+
+export interface AuthSession {
+  access_token: string;
+  refresh_token?: string;
+  token_type: string;
+  user: AuthUser;
+  current_organization: AuthOrganization;
+}
+
+export interface MeResponse {
+  user: AuthUser;
+  current_organization: AuthOrganization;
+}
+
+export interface ConnectorInfo {
+  kind: string;
+  display_name: string;
+  description: string;
+  auth_method: string;
+  capabilities: string[];
+}
+
+export interface DataSourceInfo {
+  id: string;
+  kind: string;
+  name: string;
+  status: string;
+  discovered_schema?: Record<string, unknown> | null;
+  last_synced_at?: string | null;
+  last_error?: string | null;
+  created_at: string;
+}
+
+export interface AvailableResource {
+  external_id: string;
+  name: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface ToolCallTrace {
+  name: string;
+  arguments: Record<string, unknown>;
+  result?: unknown;
+  error?: string | null;
+}
+
+export interface AskResponse {
+  answer: string;
+  artifacts: Array<Record<string, unknown>>;
+  tool_calls: ToolCallTrace[];
+  iterations: number;
+  model: string;
+  warning?: string | null;
+}
+
+export interface OperatingBrief {
+  summary: {
+    assets: number;
+    columns: number;
+    relationships: number;
+    metrics: number;
+    open_insights: number;
+    proposed_actions: number;
+    memories: number;
+    last_built_at?: string | null;
+  };
+  business?: Record<string, unknown>;
+  assets: Array<Record<string, unknown>>;
+  relationships: Array<Record<string, unknown>>;
+  metrics: Array<Record<string, unknown>>;
+  insights: Array<Record<string, unknown>>;
+  memories: Array<Record<string, unknown>>;
+  actions: Array<Record<string, unknown>>;
+}
+
 const VoidSchema = z.looseObject({});
 const OkSchema = z.object({ ok: z.boolean().optional(), accepted: z.boolean().optional() });
+
+const AuthUserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  status: z.string(),
+});
+
+const AuthOrganizationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  plan: z.string().optional(),
+});
+
+const AuthSessionSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  token_type: z.string(),
+  user: AuthUserSchema,
+  current_organization: AuthOrganizationSchema,
+});
+
+const MeSchema = z.object({
+  user: AuthUserSchema,
+  current_organization: AuthOrganizationSchema,
+});
+
+const OperatingBriefSchema = z.object({
+  summary: z.object({
+    assets: z.number(),
+    columns: z.number(),
+    relationships: z.number(),
+    metrics: z.number(),
+    open_insights: z.number(),
+    proposed_actions: z.number(),
+    memories: z.number(),
+    last_built_at: z.string().nullable().optional(),
+  }),
+  business: z.record(z.string(), z.unknown()).optional().default({}),
+  assets: z.array(z.record(z.string(), z.unknown())),
+  relationships: z.array(z.record(z.string(), z.unknown())),
+  metrics: z.array(z.record(z.string(), z.unknown())),
+  insights: z.array(z.record(z.string(), z.unknown())),
+  memories: z.array(z.record(z.string(), z.unknown())),
+  actions: z.array(z.record(z.string(), z.unknown())),
+});
 
 export class Gateway {
   private readonly transport: Transport;
@@ -25,53 +148,28 @@ export class Gateway {
     this.transport = config.transport;
   }
 
-  // ── auth ──────────────────────────────────────────────────────────────────
   readonly auth = {
-    /** Request a magic link. Returns dev_token for MVP (no email service). */
-    requestMagicLink: async (
-      req: MagicLinkRequest,
-    ): Promise<{ message: string; dev_token: string | null }> => {
+    requestMagicLink: async (req: { email: string }): Promise<{ ok: boolean }> => {
       const resp = await this.transport.request(
         { method: 'POST', path: '/api/v1/auth/magic-link', body: req },
-        z.object({ message: z.string(), dev_token: z.string().nullable() }),
+        z.object({ ok: z.boolean().optional() }),
       );
-      return resp.data;
+      return { ok: resp.data.ok ?? true };
     },
 
-    /** Verify magic link token and get JWT access token. */
-    verifyMagicLink: async (req: {
-      email: string;
-      token: string;
-    }): Promise<{ access_token: string; token_type: string; user: { id: string; email: string; organization_id: string } }> =>
+    verifyMagicLink: async (req: { email: string; token: string }): Promise<AuthSession> =>
       (
         await this.transport.request(
           { method: 'POST', path: '/api/v1/auth/magic-link/verify', body: req },
-          z.object({
-            access_token: z.string(),
-            token_type: z.string(),
-            user: z.object({
-              id: z.string().uuid(),
-              email: z.string().email(),
-              organization_id: z.string().uuid(),
-            }),
-          }),
+          AuthSessionSchema,
         )
       ).data,
 
-    /** Get current authenticated user. */
-    me: async (): Promise<{ id: string; email: string; organization: { id: string; name: string; slug: string } }> =>
+    me: async (): Promise<MeResponse> =>
       (
         await this.transport.request(
           { method: 'GET', path: '/api/v1/auth/me' },
-          z.object({
-            id: z.string().uuid(),
-            email: z.string().email(),
-            organization: z.object({
-              id: z.string().uuid(),
-              name: z.string(),
-              slug: z.string(),
-            }),
-          }),
+          MeSchema,
         )
       ).data,
 
@@ -83,155 +181,174 @@ export class Gateway {
     },
   };
 
-  // ── projects ──────────────────────────────────────────────────────────────
-  readonly projects = {
-    list: async (): Promise<{ id: string; name: string; slug: string }[]> => {
-      const resp = await this.transport.request(
-        { method: 'GET', path: '/api/v1/projects' },
-        z.array(
-          z.object({
-            id: z.string().uuid(),
-            organization_id: z.string().uuid(),
-            name: z.string(),
-            slug: z.string(),
-            created_at: z.string(),
-          }),
-        ),
-      );
-      return resp.data;
-    },
-
-    create: async (body: { name: string }): Promise<{ id: string; name: string; slug: string }> => {
-      const resp = await this.transport.request(
-        { method: 'POST', path: '/api/v1/projects', body },
-        z.object({
-          id: z.string().uuid(),
-          organization_id: z.string().uuid(),
-          name: z.string(),
-          slug: z.string(),
-          created_at: z.string(),
-        }),
-      );
-      return resp.data;
-    },
-
-    get: async (projectId: string): Promise<{ id: string; name: string; slug: string }> => {
-      const resp = await this.transport.request(
-        { method: 'GET', path: `/api/v1/projects/${projectId}` },
-        z.object({
-          id: z.string().uuid(),
-          organization_id: z.string().uuid(),
-          name: z.string(),
-          slug: z.string(),
-          created_at: z.string(),
-        }),
-      );
-      return resp.data;
-    },
-  };
-
-  // ── connectors ────────────────────────────────────────────────────────────
   readonly connectors = {
-    list: async (projectId: string): Promise<{ id: string; kind: string; name: string; status: string; config: Record<string, unknown> }[]> => {
+    list: async (): Promise<ConnectorInfo[]> => {
       const resp = await this.transport.request(
-        { method: 'GET', path: '/api/v1/connectors', query: { project_id: projectId } },
-        z.array(z.looseObject({})),
-      );
-      return (resp.data as unknown[]).map((row): { id: string; kind: string; name: string; status: string; config: Record<string, unknown> } => {
-        const r = row as Record<string, unknown>;
-        return {
-          id: String(r.id),
-          kind: String(r.kind),
-          name: String(r.name),
-          status: String(r.status),
-          config: (r.config as Record<string, unknown>) ?? {},
-        };
-      });
-    },
-
-    create: async (body: { project_id: string; kind: string; name: string; config: Record<string, unknown> }): Promise<{ id: string }> => {
-      const resp = await this.transport.request(
-        { method: 'POST', path: '/api/v1/connectors', body },
-        z.object({ id: z.string().uuid() }),
-      );
-      return resp.data;
-    },
-
-    getAuthUrl: async (projectId: string, spreadsheetId?: string, returnTo?: string): Promise<{ auth_url: string }> => {
-      const query: Record<string, string> = { project_id: projectId };
-      if (spreadsheetId) query.spreadsheet_id = spreadsheetId;
-      if (returnTo) query.return_to = returnTo;
-      const resp = await this.transport.request(
-        { method: 'GET', path: '/api/v1/connectors/google-sheets/auth-url', query },
-        z.object({ auth_url: z.string() }),
-      );
-      return resp.data;
-    },
-
-    sync: async (sourceId: string): Promise<{ sync_run_id: string; status: string; rows_synced: number; error_message: string | null }> => {
-      const resp = await this.transport.request(
-        { method: 'POST', path: `/api/v1/connectors/${sourceId}/sync` },
+        { method: 'GET', path: '/api/v1/connectors' },
         z.object({
-          sync_run_id: z.string().uuid(),
-          status: z.string(),
-          rows_synced: z.number().int(),
-          error_message: z.string().nullable(),
+          connectors: z.array(
+            z.object({
+              kind: z.string(),
+              display_name: z.string(),
+              description: z.string(),
+              auth_method: z.string(),
+              capabilities: z.array(z.string()),
+            }),
+          ),
         }),
       );
-      return resp.data;
+      return resp.data.connectors;
     },
-  };
 
-  // ── insights ──────────────────────────────────────────────────────────────
-  readonly insights = {
-    list: async (query: {
-      project_id: string;
-      unread_only?: boolean;
-      limit?: number;
-      offset?: number;
-    }): Promise<InsightListResponse> =>
+    start: async (
+      kind: string,
+      body?: { shop_domain?: string },
+    ): Promise<{ authorize_url: string }> =>
       (
         await this.transport.request(
-          { method: 'GET', path: '/api/v1/insights', query: queryToParams(query) },
-          InsightListResponseSchema,
+          { method: 'POST', path: `/api/v1/connectors/${kind}/connect`, body },
+          z.object({ authorize_url: z.string() }),
+        )
+      ).data,
+  };
+
+  readonly data = {
+    listSources: async (): Promise<DataSourceInfo[]> =>
+      (
+        await this.transport.request(
+          { method: 'GET', path: '/api/v1/data-sources' },
+          z.object({
+            data_sources: z.array(
+              z.object({
+                id: z.string(),
+                kind: z.string(),
+                name: z.string(),
+                status: z.string(),
+                discovered_schema: z.record(z.string(), z.unknown()).nullable().optional(),
+                last_synced_at: z.string().nullable().optional(),
+                last_error: z.string().nullable().optional(),
+                created_at: z.string(),
+              }),
+            ),
+          }),
+        )
+      ).data.data_sources,
+
+    listConnectionResources: async (connectionId: string): Promise<{ resources: AvailableResource[] }> =>
+      (
+        await this.transport.request(
+          { method: 'GET', path: `/api/v1/connections/${connectionId}/resources` },
+          z.object({
+            connection: z.record(z.string(), z.unknown()),
+            resources: z.array(
+              z.object({
+                external_id: z.string(),
+                name: z.string(),
+                metadata: z.record(z.string(), z.unknown()).default({}),
+              }),
+            ),
+          }),
         )
       ).data,
 
-    stats: async (project_id: string): Promise<InsightStatsResponse> =>
+    createSources: async (connectionId: string, resources: AvailableResource[]): Promise<DataSourceInfo[]> =>
       (
         await this.transport.request(
-          { method: 'GET', path: '/api/v1/insights/stats', query: { project_id } },
-          InsightStatsResponseSchema,
+          {
+            method: 'POST',
+            path: `/api/v1/connections/${connectionId}/sources`,
+            body: { resources },
+          },
+          z.object({
+            data_sources: z.array(
+              z.object({
+                id: z.string(),
+                kind: z.string(),
+                name: z.string(),
+                status: z.string(),
+                discovered_schema: z.record(z.string(), z.unknown()).nullable().optional(),
+                last_synced_at: z.string().nullable().optional(),
+                last_error: z.string().nullable().optional(),
+                created_at: z.string(),
+              }),
+            ),
+          }),
+        )
+      ).data.data_sources,
+  };
+
+  readonly operating = {
+    brief: async (): Promise<OperatingBrief> =>
+      (
+        await this.transport.request(
+          { method: 'GET', path: '/api/v1/operating/brief' },
+          OperatingBriefSchema,
         )
       ).data,
 
-    markRead: async (insightId: string): Promise<void> => {
+    rebuild: async (): Promise<OperatingBrief> =>
+      (
+        await this.transport.request(
+          { method: 'POST', path: '/api/v1/operating/rebuild' },
+          OperatingBriefSchema,
+        )
+      ).data,
+
+    scan: async (): Promise<OperatingBrief> =>
+      (
+        await this.transport.request(
+          { method: 'POST', path: '/api/v1/operating/scan' },
+          OperatingBriefSchema,
+        )
+      ).data,
+
+    remember: async (body: { key: string; value: string }): Promise<{ id: string; key: string; value: string }> =>
+      (
+        await this.transport.request(
+          { method: 'POST', path: '/api/v1/operating/memory', body },
+          z.object({ id: z.string(), key: z.string(), value: z.string() }),
+        )
+      ).data,
+
+    dismissInsight: async (insightId: string): Promise<void> => {
       await this.transport.request(
-        { method: 'POST', path: `/api/v1/insights/${insightId}/read` },
-        VoidSchema,
+        { method: 'POST', path: `/api/v1/operating/insights/${insightId}/dismiss` },
+        OkSchema,
       );
     },
 
-    dismiss: async (insightId: string): Promise<void> => {
+    approveAction: async (actionId: string): Promise<void> => {
       await this.transport.request(
-        { method: 'POST', path: `/api/v1/insights/${insightId}/dismiss` },
-        VoidSchema,
+        { method: 'POST', path: `/api/v1/operating/actions/${actionId}/approve` },
+        OkSchema,
       );
     },
   };
 
-  // ── query ─────────────────────────────────────────────────────────────────
   readonly query = {
-    ask: async (body: { project_id: string; question: string }): Promise<{ answer: string; sql: string | null }> => {
-      const resp = await this.transport.request(
-        { method: 'POST', path: '/api/v1/query/ask', body },
-        z.object({ answer: z.string(), sql: z.string().nullable() }),
-      );
-      return resp.data;
-    },
+    ask: async (body: { question: string }): Promise<AskResponse> =>
+      (
+        await this.transport.request(
+          { method: 'POST', path: '/api/v1/ask', body },
+          z.object({
+            answer: z.string(),
+            artifacts: z.array(z.record(z.string(), z.unknown())).optional().default([]),
+            tool_calls: z.array(
+              z.object({
+                name: z.string(),
+                arguments: z.record(z.string(), z.unknown()),
+                result: z.unknown().optional(),
+                error: z.string().nullable().optional(),
+              }),
+            ),
+            iterations: z.number(),
+            model: z.string(),
+            warning: z.string().nullable().optional(),
+          }),
+        )
+      ).data,
   };
 
-  // ── system ────────────────────────────────────────────────────────────────
   readonly system = {
     health: async () => {
       const Schema = z.object({ healthy: z.boolean().optional(), ok: z.boolean().optional() });
@@ -247,21 +364,4 @@ export class Gateway {
 
 export function createGateway(config: GatewayConfig): Gateway {
   return new Gateway(config);
-}
-
-function queryToParams(query: Record<string, unknown>): TransportRequest['query'] {
-  const out: Record<string, string | number | boolean | undefined> = {};
-  for (const [key, value] of Object.entries(query)) {
-    if (value === null || value === undefined) continue;
-    if (
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean'
-    ) {
-      out[key] = value;
-    } else {
-      out[key] = JSON.stringify(value);
-    }
-  }
-  return out;
 }

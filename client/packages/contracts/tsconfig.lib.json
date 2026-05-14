@@ -1,9 +1,0 @@
-{
-  "extends": "@baseflo/config/tsconfig.base",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "noEmit": false
-  },
-  "include": ["src/**/*"]
-}
