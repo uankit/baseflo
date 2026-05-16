@@ -243,6 +243,19 @@ async def _profiler(organization_id: UUID, *, snapshot_ids=None):
     )
 
 
+async def _empty_profiler(organization_id: UUID, *, snapshot_ids=None):
+    from app.data_profiler.contracts import ProfilerRunResult
+
+    return ProfilerRunResult(
+        organization_id=str(organization_id),
+        snapshot_ids=[],
+        asset_count=0,
+        field_count=0,
+        relationship_count=0,
+        quality_flags=["no_completed_snapshots"],
+    )
+
+
 async def _memory_recorder(
     organization_id: UUID,
     *,
@@ -369,6 +382,48 @@ async def test_operating_pipeline_scan_returns_completed_run() -> None:
     assert "artifact_plane.completed" in event_types
     assert "action_plane.completed" in event_types
     assert event_types[-1] == "operating.completed"
+
+
+@pytest.mark.asyncio
+async def test_operating_pipeline_no_canonical_data_stops_before_agent_plane() -> None:
+    from app.operating_pipeline import OperatingPipeline, OperatingRunRequest
+
+    org_id = uuid4()
+
+    class AgentShouldNotRun(FakeAgentPlane):
+        async def run(self, organization_id, *, snapshot_ids=None, mode="scan", question=None):
+            raise AssertionError("agent plane should not run without canonical data")
+
+    pipeline = OperatingPipeline(
+        agent_plane=AgentShouldNotRun(org_id, []),
+        profiler=_empty_profiler,
+        memory_recorder=_memory_recorder,
+        entity_resolution_runner=_entity_resolution_recorder,
+        knowledge_graph_recorder=_knowledge_graph_recorder,
+        artifact_recorder=_artifact_recorder,
+        action_recorder=_action_recorder,
+    )
+
+    event_types: list[str] = []
+
+    async def publish_event(**event):
+        event_types.append(event["type"])
+
+    result = await pipeline.run(
+        org_id,
+        OperatingRunRequest(mode="scan"),
+        event_publisher=publish_event,
+    )
+
+    assert result.status == "failed"
+    assert result.context_summary.asset_count == 0
+    assert result.profile is not None
+    assert result.profile.quality_flags == ["no_completed_snapshots"]
+    assert result.errors[0].stage == "data_plane"
+    assert result.errors[0].details["code"] == "NO_CANONICAL_DATA"
+    assert "agent_plane.planning_started" not in event_types
+    assert "data_plane.no_canonical_data" in event_types
+    assert event_types[-1] == "operating.failed"
 
 
 @pytest.mark.asyncio

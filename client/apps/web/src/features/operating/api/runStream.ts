@@ -14,10 +14,16 @@ export interface OperatingRunStreamState {
 }
 
 const eventTypes = [
+  'run.queued',
+  'run.started',
+  'run.heartbeat',
+  'run.completed',
+  'run.failed',
   'operating.started',
   'profiler.started',
   'profiler.completed',
   'profiler.failed',
+  'data_plane.no_canonical_data',
   'agent_plane.planning_started',
   'agent_plane.planning_completed',
   'agent_plane.planning_failed',
@@ -80,14 +86,14 @@ export async function startOperatingRunWithEvents(
     });
 
     const close = () => source.close();
-    const finish = async () => {
+    const finish = async (fallbackError?: Error) => {
       try {
         const result = await gateway.operating.result(accepted.run_id);
         close();
         resolve(result);
       } catch (error) {
         close();
-        reject(error instanceof Error ? error : new Error(String(error)));
+        reject(fallbackError ?? (error instanceof Error ? error : new Error(String(error))));
       }
     };
 
@@ -95,12 +101,11 @@ export async function startOperatingRunWithEvents(
       source.addEventListener(type, (message) => {
         const event = parseRunEvent(message);
         onEvent?.(event);
-        if (type === 'operating.completed' || type === 'operating.partial') {
+        if (type === 'run.completed') {
           void finish();
         }
-        if (type === 'operating.failed') {
-          close();
-          reject(new Error(event.message || 'Operating run failed.'));
+        if (type === 'run.failed') {
+          void finish(new Error(event.message || 'Operating run failed.'));
         }
       });
     }

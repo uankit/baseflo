@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { IconRefresh } from '@baseflo/ui/icons';
-import { useBusinessLiveArtifacts } from '../api/useOperatingData.js';
+import type { OperatingRunResult } from '@baseflo/api-client';
+import { useBusinessLiveArtifacts, useDataSources } from '../api/useOperatingData.js';
 import { useOperatingRunStream } from '../api/useOperatingRunStream.js';
 import { BusinessSectionCard, MetricStrip } from '../components/BusinessLiveCards.js';
 import { RunProgress } from '../components/RunProgress.js';
@@ -10,13 +11,17 @@ import { labelize, percent } from '../../common/model/format.js';
 
 export function BusinessLiveScreen() {
   const live = useBusinessLiveArtifacts();
+  const sources = useDataSources();
   const runner = useOperatingRunStream();
   const businessView = live.businessView.data;
   const businessSurfaces = live.businessSurfaces.data;
   const contractError = live.businessView.error ?? live.businessSurfaces.error;
+  const noCanonicalData = hasNoCanonicalData(runner.result);
+  const sourcesLoaded = !sources.isPending && !sources.isError;
+  const hasConnectedSources = (sources.data?.length ?? 0) > 0;
 
   const refresh = () => {
-    void runner.start({ mode: 'scan' });
+    void runner.start({ mode: 'scan' }).catch(() => undefined);
   };
 
   if (live.isPending) {
@@ -36,17 +41,37 @@ export function BusinessLiveScreen() {
   }
 
   if (live.isError || !businessView || !businessSurfaces) {
+    const needsSource = noCanonicalData || (sourcesLoaded && !hasConnectedSources);
     return (
       <ScreenFrame
         eyebrow="business live"
-        title="Connect data, then let Baseflo build your business"
-        summary="Business Live appears after the first operating run creates a business view and generated surfaces."
+        title={needsSource ? 'Connect a source first' : 'Connect data, then let Baseflo build your business'}
+        summary={
+          needsSource
+            ? 'Business Live needs at least one synced data source before Baseflo can build receivables, inventory, sales, products, expenses, and other operating surfaces.'
+            : 'Business Live appears after the first operating run creates a business view and generated surfaces.'
+        }
       >
         <RunProgress events={runner.events} isRunning={runner.isRunning} error={runner.error} />
         <EmptyPanel
-          title="No Business Live artifact yet"
-          summary="Run the operating pipeline once Baseflo has at least one connected source. The backend will create sections like Receivables, Inventory, Sales, Products, Expenses, and Data Quality only when the data supports them."
-          action={<PrimaryButton onClick={refresh} disabled={runner.isRunning}>build business live</PrimaryButton>}
+          title={needsSource ? 'No canonical business data yet' : 'No Business Live artifact yet'}
+          summary={
+            needsSource
+              ? 'Open Sources and connect or sync your first file/store. Once Baseflo has canonical rows, this button will build your live business model.'
+              : 'Run the operating pipeline once Baseflo has at least one connected source. The backend will create sections like Receivables, Inventory, Sales, Products, Expenses, and Data Quality only when the data supports them.'
+          }
+          action={
+            needsSource ? (
+              <Link
+                to="/workspace/sources"
+                className="inline-flex items-center justify-center border border-flame bg-flame px-4 py-2 text-sm font-semibold text-white shadow-[2px_2px_0_rgba(28,25,20,0.85)] transition hover:-translate-y-px"
+              >
+                open sources
+              </Link>
+            ) : (
+              <PrimaryButton onClick={refresh} disabled={runner.isRunning}>build business live</PrimaryButton>
+            )
+          }
         />
       </ScreenFrame>
     );
@@ -121,5 +146,19 @@ export function BusinessLiveScreen() {
         </aside>
       </div>
     </ScreenFrame>
+  );
+}
+
+function hasNoCanonicalData(result: OperatingRunResult | null): boolean {
+  return Boolean(
+    result?.errors.some((error) => {
+      const details = error.details;
+      return (
+        typeof details === 'object' &&
+        details !== null &&
+        'code' in details &&
+        details.code === 'NO_CANONICAL_DATA'
+      );
+    }),
   );
 }

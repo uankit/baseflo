@@ -231,6 +231,40 @@ class OperatingPipeline:
                     progress=0.18,
                     payload=profile.model_dump(mode="json"),
                 )
+                if profile.asset_count == 0:
+                    no_data_error = OperatingRunError(
+                        stage="data_plane",
+                        message=(
+                            "No canonical business data is ready yet. Connect and sync a source "
+                            "before building Business Live."
+                        ),
+                        details={
+                            "code": "NO_CANONICAL_DATA",
+                            "action": "connect_source",
+                            "snapshot_count": len(profile.snapshot_ids),
+                            "quality_flags": profile.quality_flags,
+                        },
+                    )
+                    result = OperatingRunResult(
+                        mode=req.mode,
+                        organization_id=organization_id,
+                        question=req.question,
+                        status="failed",
+                        started_at=started_at,
+                        completed_at=datetime.now(UTC),
+                        profile=profile,
+                        context_summary=OperatingContextSummary(),
+                        errors=[no_data_error],
+                    )
+                    await publish(
+                        type="data_plane.no_canonical_data",
+                        stage="data_plane",
+                        message=no_data_error.message,
+                        progress=0.2,
+                        payload=no_data_error.model_dump(mode="json"),
+                    )
+                    await _publish_operating_terminal(publish, result)
+                    return result
             except Exception as exc:
                 errors.append(_error("data_profiler", exc))
                 await publish(

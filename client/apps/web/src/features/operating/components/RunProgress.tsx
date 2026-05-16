@@ -12,6 +12,10 @@ export function RunProgress({
 }) {
   if (!isRunning && events.length === 0 && !error) return null;
   const latest = events.at(-1);
+  const displayEvent =
+    latest?.type.startsWith('run.')
+      ? [...events].reverse().find((event) => !event.type.startsWith('run.')) ?? latest
+      : latest;
   const progress = latest?.progress ?? (isRunning ? 0.08 : 1);
   return (
     <section className="mb-6 border border-ink/25 bg-paper-soft p-4">
@@ -21,7 +25,7 @@ export function RunProgress({
             operating run
           </p>
           <p className="mt-1 text-sm font-semibold text-ink">
-            {error ? error.message : latest?.message ?? 'Starting Baseflo operating run'}
+            {error ? error.message : displayEvent?.message ?? 'Starting Baseflo operating run'}
           </p>
         </div>
         <span className="font-mono text-xs text-ink/55">{percent(progress)}</span>

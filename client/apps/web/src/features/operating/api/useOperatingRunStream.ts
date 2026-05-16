@@ -27,10 +27,11 @@ export function useOperatingRunStream() {
       setState({ ...initialState, status: 'starting' });
       try {
         const result = await startOperatingRunWithEvents(gateway, request, (event: RunEvent) => {
+          const isFailedEvent = event.type === 'operating.failed' || event.type === 'run.failed';
           setState((current) => ({
             ...current,
             runId: event.run_id,
-            status: event.type === 'operating.failed' ? 'failed' : 'running',
+            status: isFailedEvent ? 'failed' : 'running',
             events: [...current.events, event],
           }));
         });
