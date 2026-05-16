@@ -25,7 +25,6 @@ from app.connector_runtime.factory import get_source_instance
 from app.connector_runtime.resources import resource_config_for
 from app.connector_runtime.store import (
     DataSourceRecord,
-    create_data_source,
     load_connection,
     load_data_sources_by_ids,
     load_source_with_connection,
@@ -33,6 +32,7 @@ from app.connector_runtime.store import (
     mark_data_source_synced,
     update_connection_credentials,
     update_data_source_introspection,
+    upsert_data_source,
 )
 from app.core.enums import DataSourceStatus
 from app.core.errors import NotFoundError
@@ -107,7 +107,7 @@ class DataSourceOnboardingService:
     ) -> list[UUID]:
         created_ids: list[UUID] = []
         for resource in resources:
-            data_source = await create_data_source(
+            data_source = await upsert_data_source(
                 organization_id=organization_id,
                 connection_id=connection_id,
                 kind=kind,

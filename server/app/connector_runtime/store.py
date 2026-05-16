@@ -15,7 +15,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.core.enums import ConnectionStatus, DataSourceStatus
-from app.db.models import Connection, DataSource
+from app.db.models import CanonicalAsset, Connection, DataSource
 from app.db.session import open_session
 
 
@@ -138,7 +138,7 @@ async def upsert_oauth_connection(
         return connection.id
 
 
-async def create_data_source(
+async def upsert_data_source(
     *,
     organization_id: UUID,
     connection_id: UUID,
@@ -147,17 +147,48 @@ async def create_data_source(
     config: dict[str, Any],
     created_by_user_id: UUID,
 ) -> DataSourceRecord:
+    """Create or reuse the source record for one connector resource.
+
+    Selecting the same spreadsheet/shop/resource twice should refresh the same
+    canonical source, not create a second source that collides on canonical
+    asset names.
+    """
     async with open_session() as session:
-        data_source = DataSource(
-            organization_id=organization_id,
-            connection_id=connection_id,
-            kind=kind,
-            name=name,
-            config=config,
-            status=DataSourceStatus.ACTIVE,
-            created_by_user_id=created_by_user_id,
+        result = await session.execute(
+            select(DataSource)
+            .where(
+                DataSource.organization_id == organization_id,
+                DataSource.connection_id == connection_id,
+                DataSource.kind == kind,
+                DataSource.config == config,
+            )
+            .order_by(DataSource.created_at.asc())
         )
-        session.add(data_source)
+        candidates = list(result.scalars().all())
+        data_source = await _preferred_data_source(session, candidates)
+        if data_source is None:
+            data_source = DataSource(
+                organization_id=organization_id,
+                connection_id=connection_id,
+                kind=kind,
+                name=name,
+                config=config,
+                status=DataSourceStatus.ACTIVE,
+                created_by_user_id=created_by_user_id,
+            )
+            session.add(data_source)
+        else:
+            data_source.name = name
+            data_source.config = config
+            data_source.status = DataSourceStatus.ACTIVE
+            data_source.last_error = None
+            for duplicate in candidates:
+                if duplicate.id == data_source.id:
+                    continue
+                duplicate.status = DataSourceStatus.DISCONNECTED
+                duplicate.last_error = (
+                    "Superseded by another source record for the same connector resource."
+                )
         await session.flush()
         return data_source_record(data_source)
 
@@ -243,3 +274,20 @@ async def mark_data_source_error(data_source_id: UUID, *, error: str) -> None:
         if data_source is not None:
             data_source.status = DataSourceStatus.ERROR
             data_source.last_error = error
+
+
+async def _preferred_data_source(
+    session: Any,
+    candidates: list[DataSource],
+) -> DataSource | None:
+    if not candidates:
+        return None
+    candidate_ids = [candidate.id for candidate in candidates]
+    result = await session.execute(
+        select(CanonicalAsset.data_source_id).where(CanonicalAsset.data_source_id.in_(candidate_ids))
+    )
+    source_ids_with_assets = set(result.scalars().all())
+    for candidate in candidates:
+        if candidate.id in source_ids_with_assets:
+            return candidate
+    return candidates[0]

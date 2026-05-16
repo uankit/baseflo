@@ -46,6 +46,39 @@ def test_entity_resolution_execute_delegates_to_engine() -> None:
     assert execution.row_count == 1
 
 
+def test_splink_dataframe_includes_all_plan_columns() -> None:
+    from types import SimpleNamespace
+
+    from app.entity_resolution_plane.contracts import EntityResolutionDataset
+    from app.entity_resolution_plane.splink_engine import _dataframe
+
+    fake_pandas = SimpleNamespace(
+        DataFrame=lambda rows, columns=None: {"rows": rows, "columns": columns}
+    )
+
+    dataset = EntityResolutionDataset(
+        dataset_id="left",
+        label="Left",
+        rows=[{"bf_record_id": "1", "party_name": "Acme Corp"}],
+        field_map={"asset-a.party-name": "party_name"},
+    )
+
+    dataframe = _dataframe(
+        fake_pandas,
+        dataset,
+        ["asset-a.party-name", "asset-b.party-name"],
+    )
+
+    assert dataframe["columns"] == [
+        "bf_record_id",
+        "bf_dataset",
+        "asset_a__party_name",
+        "asset_b__party_name",
+    ]
+    assert dataframe["rows"][0]["asset_a__party_name"] == "Acme Corp"
+    assert dataframe["rows"][0]["asset_b__party_name"] is None
+
+
 async def test_entity_resolution_runner_loads_datasets_and_executes(monkeypatch) -> None:
     from uuid import uuid4
 

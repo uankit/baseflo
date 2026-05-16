@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from app.entity_resolution_plane.contracts import (
@@ -40,7 +41,8 @@ class SplinkEntityResolutionEngine:
         try:
             pd, splink, cl = _import_splink_runtime()
             settings = _settings(plan, cl, splink.block_on)
-            dataframes = [_dataframe(pd, dataset) for dataset in datasets]
+            field_ids = [field.field_id for field in plan.fields]
+            dataframes = [_dataframe(pd, dataset, field_ids) for dataset in datasets]
             db_api = splink.DuckDBAPI()
             linker = splink.Linker(
                 dataframes[0] if len(dataframes) == 1 else dataframes,
@@ -137,17 +139,19 @@ def _comparison(field: Any, cl: Any) -> Any:
     return cl.ExactMatch(column)
 
 
-def _dataframe(pd: Any, dataset: EntityResolutionDataset) -> Any:
+def _dataframe(pd: Any, dataset: EntityResolutionDataset, field_ids: Iterable[str]) -> Any:
+    columns = ["bf_record_id", "bf_dataset", *_canonical_columns(field_ids)]
     rows: list[dict[str, Any]] = []
     for index, raw in enumerate(dataset.rows):
-        row: dict[str, Any] = {
-            "bf_record_id": str(raw.get("bf_record_id") or raw.get("_bf_record_id") or index),
-            "bf_dataset": dataset.dataset_id,
-        }
+        row: dict[str, Any] = dict.fromkeys(columns)
+        row["bf_record_id"] = str(raw.get("bf_record_id") or raw.get("_bf_record_id") or index)
+        row["bf_dataset"] = dataset.dataset_id
         for field_id, source_key in dataset.field_map.items():
-            row[_canonical_column(field_id)] = raw.get(source_key)
+            column = _canonical_column(field_id)
+            if column in row:
+                row[column] = raw.get(source_key)
         rows.append(row)
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=columns)
 
 
 def _match(row: dict[str, Any], datasets: list[EntityResolutionDataset]) -> EntityMatch:
@@ -198,6 +202,18 @@ def _clusters(rows: list[dict[str, Any]]) -> list[Any]:
 
 def _canonical_column(field_id: str) -> str:
     return field_id.replace(".", "__").replace("-", "_").replace(" ", "_").lower()
+
+
+def _canonical_columns(field_ids: Iterable[str]) -> list[str]:
+    columns: list[str] = []
+    seen: set[str] = set()
+    for field_id in field_ids:
+        column = _canonical_column(field_id)
+        if not column or column in seen:
+            continue
+        seen.add(column)
+        columns.append(column)
+    return columns
 
 
 def _probability(row: dict[str, Any]) -> float:

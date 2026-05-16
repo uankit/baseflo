@@ -10,7 +10,6 @@ from app.connector_runtime.resources import resource_config_for
 from app.connector_runtime.store import (
     ConnectionRecord,
     DataSourceRecord,
-    create_data_source,
     list_data_sources,
     load_connection,
     load_data_source,
@@ -20,6 +19,7 @@ from app.connector_runtime.store import (
     mark_data_source_synced,
     update_connection_credentials,
     update_data_source_introspection,
+    upsert_data_source,
     upsert_oauth_connection,
 )
 
@@ -29,7 +29,6 @@ __all__ = [
     "OAuthCallbackError",
     "build_authorize_url",
     "credentials_from_callback",
-    "create_data_source",
     "get_source_instance",
     "list_data_sources",
     "load_connection",
@@ -42,5 +41,6 @@ __all__ = [
     "resource_config_for",
     "update_connection_credentials",
     "update_data_source_introspection",
+    "upsert_data_source",
     "upsert_oauth_connection",
 ]

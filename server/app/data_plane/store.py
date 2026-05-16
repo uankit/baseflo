@@ -216,6 +216,58 @@ async def _reset_canonical_catalog_for_source(session: Any, data_source: DataSou
     )
 
 
+async def _remove_conflicting_canonical_assets(
+    session: Any,
+    data_source: DataSource,
+    *,
+    qualified_name: str,
+) -> None:
+    asset_ids = list(
+        (
+            await session.execute(
+                select(CanonicalAsset.id).where(
+                    CanonicalAsset.organization_id == data_source.organization_id,
+                    CanonicalAsset.qualified_name == qualified_name,
+                    CanonicalAsset.data_source_id != data_source.id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not asset_ids:
+        return
+    field_ids = list(
+        (
+            await session.execute(
+                select(CanonicalField.id).where(CanonicalField.asset_id.in_(asset_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    stale_node_ids = [
+        *[node_id("canonical_asset", asset_id) for asset_id in asset_ids],
+        *[node_id("canonical_field", field_id) for field_id in field_ids],
+    ]
+    if stale_node_ids:
+        await session.execute(
+            delete(DataGraphEdge).where(
+                DataGraphEdge.organization_id == data_source.organization_id,
+                or_(
+                    DataGraphEdge.subject_id.in_(stale_node_ids),
+                    DataGraphEdge.object_id.in_(stale_node_ids),
+                ),
+            )
+        )
+    await session.execute(
+        delete(CanonicalAsset).where(
+            CanonicalAsset.organization_id == data_source.organization_id,
+            CanonicalAsset.id.in_(asset_ids),
+        )
+    )
+
+
 async def _begin_canonical_snapshot(
     session: Any,
     data_source: DataSource,
@@ -252,6 +304,11 @@ async def _register_canonical_asset(
     source_columns_by_storage: dict[str, str | None] | None = None,
 ) -> CanonicalAsset:
     metadata = metadata or {}
+    await _remove_conflicting_canonical_assets(
+        session,
+        data_source,
+        qualified_name=qualified_name,
+    )
     asset = CanonicalAsset(
         organization_id=data_source.organization_id,
         data_source_id=data_source.id,
