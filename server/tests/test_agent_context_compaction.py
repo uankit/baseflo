@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 
 def test_compact_context_payload_bounds_samples_profiles_and_previews() -> None:
     from app.agent_plane.context import compact_asset_payload, compact_context_payload
@@ -63,3 +65,68 @@ def test_compact_context_payload_bounds_samples_profiles_and_previews() -> None:
     asset_payload = compact_asset_payload(asset, include_preview_rows=True)
     assert len(asset_payload["preview_rows"]) == 2
     assert len(asset_payload["preview_rows"][0]) == 12
+
+
+def test_business_overview_payload_stays_small_for_wide_workbooks() -> None:
+    from app.agent_plane.context import business_overview_payload
+    from app.agent_plane.contracts import AssetEvidence, CanonicalContextPack, FieldEvidence
+
+    assets = []
+    for asset_index in range(40):
+        fields = [
+            FieldEvidence(
+                field_id=f"field-{asset_index}-{field_index}",
+                asset_id=f"asset-{asset_index}",
+                name=f"Very Detailed Operational Field {asset_index} {field_index}",
+                ordinal=field_index,
+                storage_type="varchar",
+                observed_type="text",
+                nullable=True,
+                sample_values=[
+                    "long historical cell value that should be trimmed before reaching the model",
+                    "another value",
+                    "third value",
+                ],
+                profile={
+                    "profiler": {
+                        "candidates": [{"kind": "measure" if field_index % 7 == 0 else "label", "confidence": 0.7}],
+                    }
+                },
+            )
+            for field_index in range(120)
+        ]
+        assets.append(
+            AssetEvidence(
+                asset_id=f"asset-{asset_index}",
+                data_source_id="source-1",
+                snapshot_id="snapshot-1",
+                asset_key=f"tab_{asset_index}",
+                qualified_name=f"sheet__tab_{asset_index}",
+                storage_table=f"sheet__tab_{asset_index}",
+                label=f"Sheet Tab {asset_index}",
+                asset_type="table",
+                row_count=1000,
+                field_count=len(fields),
+                profile={
+                    "profiler": {
+                        "measure_field_ids": [f"field-{asset_index}-{index}" for index in range(0, 60, 7)],
+                        "label_field_ids": [f"field-{asset_index}-1"],
+                    }
+                },
+                fields=fields,
+            )
+        )
+    context = CanonicalContextPack(
+        organization_id="org-1",
+        snapshots=[],
+        assets=assets,
+        graph_edges=[],
+        memories=[],
+    )
+
+    payload = business_overview_payload(context)
+    encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+    assert len(payload["assets"]) == 16
+    assert all(len(asset["fields"]) <= 12 for asset in payload["assets"])
+    assert len(encoded) < 80_000

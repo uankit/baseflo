@@ -16,6 +16,11 @@ _MAX_SAMPLE_VALUES = 4
 _MAX_PREVIEW_ROWS = 2
 _MAX_PREVIEW_COLUMNS = 12
 _MAX_TEXT_CHARS = 96
+_MAX_BUSINESS_ASSETS = 16
+_MAX_BUSINESS_FIELDS_PER_ASSET = 12
+_MAX_BUSINESS_GRAPH_EDGES = 40
+_MAX_BUSINESS_MEMORIES = 8
+_MAX_BUSINESS_SAMPLE_VALUES = 1
 
 
 async def load_canonical_context(
@@ -86,6 +91,121 @@ def compact_context_payload(context: CanonicalContextPack) -> dict[str, Any]:
             "max_sample_values_per_field": _MAX_SAMPLE_VALUES,
             "note": "Prompt payload is compacted; full canonical data remains in the execution plane.",
         },
+    }
+
+
+def business_overview_payload(context: CanonicalContextPack) -> dict[str, Any]:
+    """Tiny prompt view for BusinessUnderstander.
+
+    This agent only decides business shape. It does not need relationship
+    evidence, profiler reasons, previews, or every field in a wide workbook.
+    Exact rows remain queryable through the execution plane.
+    """
+    return {
+        "organization_id": context.organization_id,
+        "summary": {
+            "snapshot_count": len(context.snapshots),
+            "asset_count": len(context.assets),
+            "field_count": sum(len(asset.fields) for asset in context.assets),
+            "row_count": sum(asset.row_count for asset in context.assets),
+        },
+        "snapshots": [
+            {
+                "snapshot_id": snapshot.snapshot_id,
+                "asset_count": snapshot.asset_count,
+                "row_count": snapshot.row_count,
+            }
+            for snapshot in context.snapshots[:_MAX_BUSINESS_ASSETS]
+        ],
+        "assets": [_business_asset_payload(asset) for asset in context.assets[:_MAX_BUSINESS_ASSETS]],
+        "relationship_hints": [
+            {
+                "subject_id": edge.subject_id,
+                "predicate": edge.predicate,
+                "object_id": edge.object_id,
+                "confidence": edge.confidence,
+            }
+            for edge in context.graph_edges[:_MAX_BUSINESS_GRAPH_EDGES]
+        ],
+        "memories": [
+            {
+                "kind": _compact_value(memory.get("kind")),
+                "statement": _compact_value(memory.get("statement") or memory.get("value")),
+                "confidence": memory.get("confidence"),
+            }
+            for memory in context.memories[:_MAX_BUSINESS_MEMORIES]
+            if isinstance(memory, dict)
+        ],
+        "limits": {
+            "field_selection": "Only the highest-signal fields per asset are shown.",
+            "full_data_available_to_execution": True,
+        },
+    }
+
+
+def _business_asset_payload(asset: AssetEvidence) -> dict[str, Any]:
+    profile = _asset_profile_summary(asset.profile)
+    return {
+        "asset_id": asset.asset_id,
+        "asset_key": asset.asset_key,
+        "qualified_name": asset.qualified_name,
+        "label": asset.label,
+        "asset_type": asset.asset_type,
+        "row_count": asset.row_count,
+        "field_count": asset.field_count,
+        "profile": {
+            "quality_flags": profile.get("quality_flags", []),
+            "primary_key_field_ids": profile.get("primary_key_field_ids", []),
+            "label_field_ids": profile.get("label_field_ids", []),
+            "measure_field_ids": profile.get("measure_field_ids", []),
+            "timestamp_field_ids": profile.get("timestamp_field_ids", []),
+        },
+        "fields": [_business_field_payload(field) for field in _business_fields(asset)],
+    }
+
+
+def _business_fields(asset: AssetEvidence) -> list[FieldEvidence]:
+    profile = _asset_profile_summary(asset.profile)
+    priority_ids: list[str] = []
+    for key in ("primary_key_field_ids", "label_field_ids", "measure_field_ids", "timestamp_field_ids"):
+        priority_ids.extend(str(field_id) for field_id in profile.get(key, []) if field_id)
+    fields_by_id = {field.field_id: field for field in asset.fields}
+    selected: list[FieldEvidence] = []
+    seen: set[str] = set()
+    for field_id in priority_ids:
+        field = fields_by_id.get(field_id)
+        if field is not None and field.field_id not in seen:
+            selected.append(field)
+            seen.add(field.field_id)
+        if len(selected) >= _MAX_BUSINESS_FIELDS_PER_ASSET:
+            return selected
+    for field in asset.fields:
+        if field.field_id in seen:
+            continue
+        selected.append(field)
+        seen.add(field.field_id)
+        if len(selected) >= _MAX_BUSINESS_FIELDS_PER_ASSET:
+            break
+    return selected
+
+
+def _business_field_payload(field: FieldEvidence) -> dict[str, Any]:
+    profile = _field_profile_summary(field.profile)
+    candidates = [
+        candidate.get("kind")
+        for candidate in profile.get("candidates", [])
+        if isinstance(candidate, dict) and candidate.get("kind")
+    ]
+    return {
+        "field_id": field.field_id,
+        "name": field.name,
+        "observed_type": field.observed_type,
+        "nullable": field.nullable,
+        "candidates": candidates[:3],
+        "sample_values": [
+            _compact_value(value)
+            for value in field.sample_values[:_MAX_BUSINESS_SAMPLE_VALUES]
+        ],
     }
 
 

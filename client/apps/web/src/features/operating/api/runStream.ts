@@ -81,12 +81,14 @@ export async function startOperatingRunWithEvents(
 ): Promise<OperatingRunResult> {
   const accepted = await gateway.operating.start(request);
   return await new Promise((resolve, reject) => {
+    let terminalSeen = false;
     const source = new EventSource(resolveEventSourceUrl(accepted.events_url), {
       withCredentials: true,
     });
 
     const close = () => source.close();
     const finish = async (fallbackError?: Error) => {
+      terminalSeen = true;
       try {
         const result = await gateway.operating.result(accepted.run_id);
         close();
@@ -111,6 +113,7 @@ export async function startOperatingRunWithEvents(
     }
 
     source.onerror = () => {
+      if (terminalSeen) return;
       close();
       reject(new Error('The operating run event stream closed unexpectedly.'));
     };

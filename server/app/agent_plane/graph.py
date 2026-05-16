@@ -15,8 +15,8 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.agent_plane.context import (
+    business_overview_payload,
     compact_asset_payload,
-    compact_context_payload,
     compact_field_catalog,
     load_canonical_context,
 )
@@ -121,7 +121,7 @@ class AgentPlane:
     async def _business_understanding(self, context: CanonicalContextPack) -> BusinessModel:
         output = await self.runner.run(
             get_agent_spec("business_understander"),
-            {"canonical_context": compact_context_payload(context)},
+            {"canonical_context": business_overview_payload(context)},
         )
         return _typed(output, BusinessModel)
 
