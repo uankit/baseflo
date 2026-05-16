@@ -67,16 +67,17 @@ export function ErrorPanel({
   onRetry?: () => void;
 }) {
   const isContract = error instanceof Error && error.name === 'ContractMismatchError';
+  const copy = errorCopy(error);
   return (
     <div className="border border-flame/50 bg-paper-soft p-6 shadow-[3px_3px_0_rgba(220,84,37,0.25)]">
       <div className="flex items-start gap-3">
         <IconWarning className="mt-0.5 h-5 w-5 shrink-0 text-flame" />
         <div>
           <h2 className="font-serif text-2xl font-bold italic text-ink">
-            {isContract ? 'Backend contract changed' : 'Could not load this screen'}
+            {isContract ? 'Backend contract changed' : copy.title}
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/65">
-            {error instanceof Error ? error.message : 'Baseflo received an unknown error.'}
+            {isContract && error instanceof Error ? error.message : copy.message}
           </p>
           {onRetry ? (
             <button
@@ -92,6 +93,19 @@ export function ErrorPanel({
       </div>
     </div>
   );
+}
+
+function errorCopy(error: unknown): { title: string; message: string } {
+  if (typeof error === 'object' && error !== null) {
+    const candidate = error as Record<string, unknown>;
+    if (typeof candidate.title === 'string' && typeof candidate.message === 'string') {
+      return { title: candidate.title, message: candidate.message };
+    }
+  }
+  if (error instanceof Error) {
+    return { title: 'Could not load this screen', message: error.message };
+  }
+  return { title: 'Could not load this screen', message: 'Baseflo received an unknown error.' };
 }
 
 export function PrimaryButton({

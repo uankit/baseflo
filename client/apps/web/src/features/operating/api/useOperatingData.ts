@@ -22,22 +22,14 @@ import {
   safeParseArtifactPayload,
 } from '../model/schemas.js';
 
-const latestLoaders = {
-  brief: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.brief(),
-  business_view: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.businessView(),
-  business_surfaces: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.businessSurfaces(),
-  semantic_layer: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.semanticLayer(),
-  chart_grammar: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.chartGrammar(),
-  insight_ranking: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.insightRanking(),
-  knowledge_graph: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.knowledgeGraph(),
-  lineage: (gateway: ReturnType<typeof useGateway>) => gateway.artifacts.lineage(),
-} satisfies Partial<Record<ArtifactKind, (gateway: ReturnType<typeof useGateway>) => Promise<ArtifactRecord>>>;
-
-export function useLatestArtifact(kind: keyof typeof latestLoaders) {
+export function useLatestArtifact(kind: ArtifactKind) {
   const gateway = useGateway();
   return useQuery({
     queryKey: operatingKeys.artifactLatest(kind),
-    queryFn: () => latestLoaders[kind](gateway),
+    queryFn: async (): Promise<ArtifactRecord | null> => {
+      const artifacts = await gateway.artifacts.list({ kind, limit: 1 });
+      return artifacts[0] ?? null;
+    },
     retry: false,
   });
 }
