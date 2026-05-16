@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import JWTError, jwt
+from jose import JWTError, jwt  # type: ignore[import-untyped]
 
 from app.config import get_settings
 from app.core.enums import TokenType
@@ -22,6 +23,8 @@ REFRESH_TOKEN_TTL = timedelta(days=30)
 MAGIC_LINK_TTL = timedelta(minutes=15)
 INVITATION_TTL = timedelta(days=7)
 OAUTH_STATE_TTL = timedelta(minutes=15)
+
+_SLUG_RE = re.compile(r"[^a-z0-9-]+")
 
 
 def generate_token(nbytes: int = 32) -> str:
@@ -82,6 +85,19 @@ def issue_refresh_token() -> tuple[str, str]:
     """Returns (plaintext, hash). Plaintext goes to the client; hash is stored."""
     plaintext = generate_token(48)
     return plaintext, hash_token(plaintext)
+
+
+def slugify_email_local(email: str) -> str:
+    local = email.split("@", 1)[0].lower()
+    return (_SLUG_RE.sub("-", local).strip("-") or "org")[:50]
+
+
+def workspace_name_from_email(email: str) -> str:
+    return f"{slugify_email_local(email).replace('-', ' ').title()}'s Workspace"
+
+
+def generate_org_slug(email: str) -> str:
+    return f"{slugify_email_local(email)}-{secrets.token_hex(4)}"
 
 
 def encode_oauth_state(

@@ -1,3 +1,6 @@
+import importlib
+import pkgutil
+
 from connectors.base import (
     AccountInfo,
     AvailableResource,
@@ -26,11 +29,25 @@ from connectors.registry import (
 )
 from connectors.types import AuthMethod, Capability, DataType
 
-# Importing each source module triggers @register_source.
-# To add a new source: create connectors/<name>.py with config + SPEC + Source subclass,
-# then add one import line here.
-from connectors import google_sheets  # noqa: F401, E402
-from connectors import shopify  # noqa: F401, E402
+_CORE_MODULES = {
+    "auth",
+    "base",
+    "errors",
+    "registry",
+    "spreadsheet_preprocessor",
+    "types",
+}
+
+
+def _load_source_modules() -> None:
+    """Import connector modules so their @register_source decorators run."""
+    for module in pkgutil.iter_modules(__path__):  # type: ignore[name-defined]
+        if module.ispkg or module.name in _CORE_MODULES:
+            continue
+        importlib.import_module(f"{__name__}.{module.name}")
+
+
+_load_source_modules()
 
 __all__ = [
     "AccountInfo",

@@ -1,1 +1,1 @@
-"""Baseflo Brain v2 — autonomous business intelligence."""
+"""Baseflo operating intelligence server."""

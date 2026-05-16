@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 
-export function SignInView() {
+export function SignInView({ redirectTo = '/workspace/business' }: { redirectTo?: string }) {
   const { requestMagicLink, verifyMagicLink } = useAuth();
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
@@ -12,10 +12,7 @@ export function SignInView() {
     e.preventDefault();
     setError(null);
     try {
-      const resp = await requestMagicLink.mutateAsync(email);
-      if (resp.dev_token) {
-        setToken(resp.dev_token);
-      }
+      await requestMagicLink.mutateAsync(email);
       setStep('token');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send magic link');
@@ -27,7 +24,7 @@ export function SignInView() {
     setError(null);
     try {
       await verifyMagicLink.mutateAsync({ email, token });
-      window.location.href = '/';
+      window.location.assign(resolveSafeRedirect(redirectTo));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid token');
     }
@@ -104,21 +101,14 @@ export function SignInView() {
         <div className="max-w-[700px] mx-auto w-full text-[11px] font-sans text-black/50 flex gap-4 mt-16 pt-4 border-t border-black/10">
           <span>© Baseflo, 2026</span>
           <span>·</span>
-          <a href="#" className="hover:text-black border-b border-black/20 pb-0.5">&larr; back to landing</a>
+          <a href="/" className="hover:text-black border-b border-black/20 pb-0.5">&larr; back to landing</a>
           <span>·</span>
-          <a href="#" className="hover:text-black">security</a>
-          <a href="#" className="hover:text-black">privacy</a>
-          <a href="#" className="hover:text-black">status</a>
         </div>
       </div>
       
       {/* Right Column */}
       <div className="flex-1 p-6 md:p-12 flex flex-col items-center justify-center relative bg-[#f4f1ea]">
         
-        <div className="absolute top-12 right-12 text-[11px] font-sans text-black/50 hidden md:block">
-          no account? <a href="#" className="hover:text-black border-b border-black/20 pb-0.5">request access</a>
-        </div>
-
         <div className="relative w-full max-w-[420px]">
           
           {/* Passwordless sticker */}
@@ -138,8 +128,9 @@ export function SignInView() {
             {step === 'email' ? (
               <form onSubmit={handleRequest} className="space-y-6">
                 <div>
-                  <label className="block text-[10px] font-sans font-semibold tracking-widest text-black/50 uppercase mb-2">WORK EMAIL</label>
+                  <label htmlFor="signin-email" className="block text-[10px] font-sans font-semibold tracking-widest text-black/50 uppercase mb-2">WORK EMAIL</label>
                   <input 
+                    id="signin-email"
                     type="email" 
                     required
                     value={email}
@@ -160,11 +151,12 @@ export function SignInView() {
               <form onSubmit={handleVerify} className="space-y-6">
                 <div className="bg-[#f8f6f0] border border-[#d95d39]/40 p-4 text-[13px] italic text-black/70">
                   Check your email for the magic link. <br/>
-                  <span className="text-[11px] text-black/50">(In dev, token is in server logs)</span>
+                  <span className="text-[11px] text-black/50">Paste the token from the sign-in email below.</span>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-sans font-semibold tracking-widest text-black/50 uppercase mb-2">MAGIC TOKEN</label>
+                  <label htmlFor="signin-token" className="block text-[10px] font-sans font-semibold tracking-widest text-black/50 uppercase mb-2">MAGIC TOKEN</label>
                   <input 
+                    id="signin-token"
                     type="text" 
                     required
                     value={token}
@@ -192,42 +184,12 @@ export function SignInView() {
               </div>
             )}
 
-            <div className="mt-8 flex items-center gap-4">
-              <div className="flex-1 border-t border-black/20"></div>
-              <div className="text-[11px] font-serif italic text-black/50">or continue with</div>
-              <div className="flex-1 border-t border-black/20"></div>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              <button className="w-full border-2 border-black/40 bg-[#f8f6f0] hover:bg-black/5 px-4 py-3 flex items-center justify-between group transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="bg-[#1a73e8] text-white w-6 h-6 flex items-center justify-center text-[11px] font-bold font-sans rounded-sm">G</div>
-                  <span className="text-[15px] text-black/80">Continue with Google</span>
-                </div>
-                <span className="text-black/30 group-hover:text-black/80 transition-colors">➔</span>
-              </button>
-              <button className="w-full border-2 border-black/40 bg-[#f8f6f0] hover:bg-black/5 px-4 py-3 flex items-center justify-between group transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="bg-[#24292e] text-white w-6 h-6 flex items-center justify-center text-[11px] font-bold font-sans rounded-sm">GH</div>
-                  <span className="text-[15px] text-black/80">Continue with GitHub</span>
-                </div>
-                <span className="text-black/30 group-hover:text-black/80 transition-colors">➔</span>
-              </button>
-              <button className="w-full border-2 border-black/40 bg-[#f8f6f0] hover:bg-black/5 px-4 py-3 flex items-center justify-between group transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="bg-[#00a4ef] text-white w-6 h-6 flex items-center justify-center text-[11px] font-bold font-sans rounded-sm">MS</div>
-                  <span className="text-[15px] text-black/80">Continue with Microsoft</span>
-                </div>
-                <span className="text-black/30 group-hover:text-black/80 transition-colors">➔</span>
-              </button>
-            </div>
-
             <div className="mt-10 text-center">
               <p className="text-[13px] text-black/60 leading-relaxed mb-4">
                 New to Baseflo? <span className="text-[#d95d39]">enter your email above</span> — we'll create your workspace when the link is clicked.
               </p>
               <p className="text-[11px] italic text-black/50 leading-relaxed">
-                By continuing you agree to our <a href="#" className="border-b border-black/30 pb-0.5 hover:text-black">terms</a> and <a href="#" className="border-b border-black/30 pb-0.5 hover:text-black">privacy notice</a>.<br/>
+                By continuing you agree to Baseflo terms and privacy notice.<br/>
                 Sessions are encrypted & expire after 30 days of inactivity.
               </p>
             </div>
@@ -237,4 +199,21 @@ export function SignInView() {
       </div>
     </div>
   );
+}
+
+function resolveSafeRedirect(value: string): string {
+  const fallback = '/workspace/business';
+  const allowedPrefixes = ['/workspace', '/connectors', '/connections'];
+
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return fallback;
+
+    const path = `${url.pathname}${url.search}${url.hash}`;
+    return allowedPrefixes.some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))
+      ? path
+      : fallback;
+  } catch {
+    return fallback;
+  }
 }

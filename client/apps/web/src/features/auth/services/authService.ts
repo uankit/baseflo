@@ -9,11 +9,8 @@ export interface AuthUser {
 
 export function createAuthService(gateway: Gateway) {
   return {
-    async requestMagicLink(email: string): Promise<{ ok: boolean; dev_token: string | null }> {
-      // The server only logs local/dev tokens now; production-shape responses do
-      // not leak sign-in tokens to the browser.
-      const resp = await gateway.auth.requestMagicLink({ email });
-      return { ok: resp.ok, dev_token: null };
+    async requestMagicLink(email: string): Promise<{ ok: boolean }> {
+      return gateway.auth.requestMagicLink({ email });
     },
 
     async verifyMagicLink(email: string, token: string): Promise<AuthUser> {

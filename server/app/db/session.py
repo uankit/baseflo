@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -30,6 +30,5 @@ AsyncSessionLocal = async_sessionmaker(
 @asynccontextmanager
 async def open_session() -> AsyncIterator[AsyncSession]:
     """Yield a transactional session."""
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            yield session
+    async with AsyncSessionLocal() as session, session.begin():
+        yield session

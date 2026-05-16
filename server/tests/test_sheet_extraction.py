@@ -5,7 +5,6 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 
-
 CONNECTORS_ROOT = Path(__file__).resolve().parents[2] / "connectors"
 if str(CONNECTORS_ROOT) not in sys.path:
     sys.path.insert(0, str(CONNECTORS_ROOT))
@@ -61,9 +60,8 @@ def test_spreadsheet_preprocessor_preserves_raw_grid_rows_and_cells() -> None:
 
 
 def test_xlsx_preprocessor_converts_each_tab_to_canonical_grid() -> None:
-    from openpyxl import Workbook
-
     import connectors.spreadsheet_preprocessor as preprocessor
+    from openpyxl import Workbook
 
     workbook = Workbook()
     worksheet = workbook.active
@@ -87,23 +85,40 @@ def test_xlsx_preprocessor_converts_each_tab_to_canonical_grid() -> None:
     ]
 
 
-def test_substrate_column_sanitizer_handles_blank_duplicate_and_quotes() -> None:
-    from app.substrate import _quote_ident, _unique_column_names
+def test_canonical_column_sanitizer_handles_blank_duplicate_and_quotes() -> None:
+    from app.data_plane import CANONICAL_META_COLUMNS
+    from app.data_plane.naming import (
+        canonical_storage_columns,
+        quote_ident,
+        unique_column_names,
+    )
+    from app.data_plane.values import duckdb_storage_value
 
-    assert _unique_column_names(["", " ", "DATE", "DATE", 'bad"name']) == [
+    assert unique_column_names(["", " ", "DATE", "DATE", 'bad"name']) == [
         "column_1",
         "column_2",
         "DATE",
         "DATE_2",
         'bad"name',
     ]
-    assert _quote_ident('bad"name') == '"bad""name"'
+    assert quote_ident('bad"name') == '"bad""name"'
+
+    storage_columns, source_by_storage = canonical_storage_columns(
+        ["column_1", "_bf_record_id", "DATE"]
+    )
+    assert storage_columns[: len(CANONICAL_META_COLUMNS)] == CANONICAL_META_COLUMNS
+    assert "source__bf_record_id" in storage_columns
+    assert source_by_storage["_bf_record_id"] is None
+    assert source_by_storage["source__bf_record_id"] == "_bf_record_id"
+    assert source_by_storage["column_1"] == "column_1"
+    assert duckdb_storage_value({"nested": [1, "two"]}) == '{"nested": [1, "two"]}'
 
 
 def test_schema_to_dict_json_encodes_sample_values() -> None:
-    from app.api.data import _schema_to_dict
     from connectors.base import ColumnSchema, SourceSchema, TableSchema
     from connectors.types import DataType
+
+    from app.data_onboarding.service import _schema_to_dict
 
     payload = _schema_to_dict(
         SourceSchema(
@@ -128,3 +143,11 @@ def test_schema_to_dict_json_encodes_sample_values() -> None:
         "2026-05-14T09:15:00"
     ]
     assert payload["tables"][0]["metadata"] == {"preview_rows": [{"row_number": 1}]}
+
+
+def test_canonical_asset_type_is_source_neutral() -> None:
+    from app.data_plane.catalog import asset_type_from_metadata
+
+    assert asset_type_from_metadata({"format": "canonical_grid_v1"}) == "grid"
+    assert asset_type_from_metadata({"asset_type": "json_records"}) == "json_records"
+    assert asset_type_from_metadata({}) == "records"

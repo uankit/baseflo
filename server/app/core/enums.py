@@ -1,56 +1,56 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class UserStatus(str, Enum):
+class UserStatus(StrEnum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
     DELETED = "deleted"
 
 
-class OrgPlan(str, Enum):
+class OrgPlan(StrEnum):
     FREE = "free"
     PRO = "pro"
     TEAM = "team"
     ENTERPRISE = "enterprise"
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     OWNER = "owner"
     ADMIN = "admin"
     MEMBER = "member"
     VIEWER = "viewer"
 
 
-class MembershipStatus(str, Enum):
+class MembershipStatus(StrEnum):
     ACTIVE = "active"
     PENDING = "pending"
     REVOKED = "revoked"
 
 
-class MagicLinkPurpose(str, Enum):
+class MagicLinkPurpose(StrEnum):
     SIGN_IN = "sign_in"
 
 
-class TokenType(str, Enum):
+class TokenType(StrEnum):
     ACCESS = "access"
     REFRESH = "refresh"
 
 
-class ConnectionStatus(str, Enum):
+class ConnectionStatus(StrEnum):
     ACTIVE = "active"
     ERROR = "error"
     DISCONNECTED = "disconnected"
 
 
-class DataSourceStatus(str, Enum):
+class DataSourceStatus(StrEnum):
     ACTIVE = "active"
     ERROR = "error"
     DISCONNECTED = "disconnected"
 
 
-class AuthEventKind(str, Enum):
+class AuthEventKind(StrEnum):
     SIGNUP = "signup"
     LOGIN = "login"
     LOGIN_FAILED = "login_failed"

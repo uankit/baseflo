@@ -14,7 +14,7 @@ function HomePage() {
   useEffect(() => {
     if (isLoading) return;
     if (isAuthenticated) {
-      navigate({ to: '/welcome', replace: true });
+      navigate({ to: '/workspace/business', replace: true });
     }
   }, [isLoading, isAuthenticated, navigate]);
 

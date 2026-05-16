@@ -108,8 +108,6 @@ function Topbar() {
         <a href="#edition">The brief</a>
         <a href="#sources">Connect</a>
         <a href="#stance">Stance</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#docs">Docs</a>
       </nav>
       <div className="top-cta">
         <Link to="/sign-in" className="signin">
@@ -422,10 +420,7 @@ function Foot() {
     <footer className="foot">
       <div>© Baseflo, 2026 · An adaptive operating intelligence layer for a business.</div>
       <div className="links">
-        <a href="#docs">Docs</a>
-        <a href="#security">Security</a>
         <a href="#stance">Stance</a>
-        <a href="#careers">Careers</a>
         <Link to="/sign-in">Sign in</Link>
       </div>
     </footer>

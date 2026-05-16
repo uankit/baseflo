@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Callable
+from collections.abc import Callable
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
 
 from app.auth.service import decode_access_token
+from app.auth.store import active_membership_role, has_active_membership
 from app.core.context import TenantCtx, set_tenant_ctx
-from app.core.enums import MembershipStatus, Role
+from app.core.enums import Role
 from app.core.errors import AuthError
-from app.db.models import Membership
-from app.db.session import open_session
 
 _security = HTTPBearer(auto_error=False)
 
@@ -49,20 +48,12 @@ async def require_auth(
     user_id = UUID(user_id_str)
     org_id = UUID(org_id_str)
 
-    async with open_session() as session:
-        result = await session.execute(
-            select(Membership.id).where(
-                Membership.user_id == user_id,
-                Membership.organization_id == org_id,
-                Membership.status == MembershipStatus.ACTIVE,
-            )
+    if not await has_active_membership(user_id=user_id, organization_id=org_id):
+        raise AuthError(
+            message="No active membership for this organization",
+            code="AUTH_MEMBERSHIP_INACTIVE",
+            status_hint=403,
         )
-        if result.scalar_one_or_none() is None:
-            raise AuthError(
-                message="No active membership for this organization",
-                code="AUTH_MEMBERSHIP_INACTIVE",
-                status_hint=403,
-            )
 
     ctx = TenantCtx(organization_id=org_id, user_id=user_id)
     set_tenant_ctx(ctx)
@@ -79,15 +70,10 @@ def require_role(*allowed: Role) -> Callable[..., Any]:
     async def _check(
         ctx: Annotated[TenantCtx, Depends(require_auth)],
     ) -> TenantCtx:
-        async with open_session() as session:
-            result = await session.execute(
-                select(Membership.role).where(
-                    Membership.user_id == ctx.user_id,
-                    Membership.organization_id == ctx.organization_id,
-                    Membership.status == MembershipStatus.ACTIVE,
-                )
-            )
-            role = result.scalar_one_or_none()
+        role = await active_membership_role(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+        )
         if role not in allowed:
             raise AuthError(
                 message=f"Required role: one of {[r.value for r in allowed]}",

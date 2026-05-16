@@ -16,11 +16,11 @@ function WelcomePage() {
       navigate({ to: '/sign-in', replace: true });
       return;
     }
-    navigate({ to: '/workspace', replace: true });
+    navigate({ to: '/workspace/business', replace: true });
   }, [isLoading, navigate, user]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-950 px-4 text-sm text-gray-500">
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4 text-sm text-ink/55">
       Opening your operating workspace...
     </div>
   );

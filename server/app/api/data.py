@@ -2,23 +2,30 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
+from connectors.errors import ConnectorError
 from fastapi import APIRouter, Depends
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 from app.auth.dependencies import require_auth
+from app.connector_runtime import (
+    DataSourceRecord,
+    get_source_instance,
+    load_connection,
+    update_connection_credentials,
+)
+from app.connector_runtime import (
+    list_data_sources as list_data_source_records,
+)
+from app.connector_runtime import (
+    load_data_source as load_data_source_record,
+)
 from app.core.context import TenantCtx
 from app.core.enums import ConnectionStatus, DataSourceStatus
 from app.core.errors import AppError, AuthError, NotFoundError
-from app.db.models import Connection, DataSource
-from app.db.session import open_session
-from app.sources import get_source_instance
-from connectors.errors import ConnectorError
+from app.data_onboarding import DataSourceOnboardingService
 
 router = APIRouter(tags=["data"])
 
@@ -66,7 +73,7 @@ class DataSourcesResponse(BaseModel):
 # ---------- Helpers ----------
 
 
-def _ds_dto(ds: DataSource) -> DataSourceDTO:
+def _ds_dto(ds: DataSourceRecord) -> DataSourceDTO:
     return DataSourceDTO(
         id=str(ds.id),
         kind=ds.kind,
@@ -77,38 +84,6 @@ def _ds_dto(ds: DataSource) -> DataSourceDTO:
         last_error=ds.last_error,
         created_at=ds.created_at.isoformat(),
     )
-
-
-def _schema_to_dict(schema: Any) -> dict[str, Any]:
-    """Convert connectors.SourceSchema dataclass tree → JSONable dict."""
-    return {
-        "tables": [
-            {
-                "name": t.name,
-                "label": t.label,
-                "row_count": t.row_count,
-                "metadata": jsonable_encoder(t.metadata),
-                "columns": [
-                    {
-                        "name": c.name,
-                        "data_type": c.data_type.value,
-                        "sample_values": jsonable_encoder(list(c.sample_values)),
-                        "nullable": c.nullable,
-                    }
-                    for c in t.columns
-                ],
-            }
-            for t in schema.tables
-        ]
-    }
-
-
-def _resource_config(kind: str, resource: AvailableResourceDTO) -> dict[str, Any]:
-    if kind == "google_sheets":
-        return {"spreadsheet_id": resource.external_id}
-    if kind == "shopify":
-        return {"resource": resource.external_id}
-    return {"resource": resource.external_id}
 
 
 # ---------- Routes ----------
@@ -122,28 +97,27 @@ async def list_connection_resources(
     connection_id: UUID,
     tenant: Annotated[TenantCtx, Depends(require_auth)],
 ) -> ResourcesResponse:
-    async with open_session() as session:
-        conn = await session.get(Connection, connection_id)
-        if conn is None or conn.organization_id != tenant.organization_id:
-            raise NotFoundError(
-                message="Connection not found",
-                code="CONNECTION_NOT_FOUND",
-                status_hint=404,
-            )
-        if conn.status != ConnectionStatus.ACTIVE:
-            raise AuthError(
-                message=f"Connection is {conn.status.value}",
-                code="CONNECTION_INACTIVE",
-                status_hint=400,
-            )
-        kind = conn.kind
-        credentials = dict(conn.credentials)
-        conn_dto = ConnectionDTO(
-            id=str(conn.id),
-            kind=conn.kind,
-            external_account_label=conn.external_account_label,
-            status=conn.status,
+    conn = await load_connection(connection_id, organization_id=tenant.organization_id)
+    if conn is None:
+        raise NotFoundError(
+            message="Connection not found",
+            code="CONNECTION_NOT_FOUND",
+            status_hint=404,
         )
+    if conn.status != ConnectionStatus.ACTIVE:
+        raise AuthError(
+            message=f"Connection is {conn.status.value}",
+            code="CONNECTION_INACTIVE",
+            status_hint=400,
+        )
+    kind = conn.kind
+    credentials = dict(conn.credentials)
+    conn_dto = ConnectionDTO(
+        id=str(conn.id),
+        kind=conn.kind,
+        external_account_label=conn.external_account_label,
+        status=conn.status,
+    )
 
     source = get_source_instance(kind)
     try:
@@ -159,10 +133,7 @@ async def list_connection_resources(
         ) from exc
 
     if new_credentials != credentials:
-        async with open_session() as session:
-            persistent = await session.get(Connection, connection_id)
-            if persistent is not None:
-                persistent.credentials = new_credentials
+        await update_connection_credentials(connection_id, new_credentials)
 
     return ResourcesResponse(
         connection=conn_dto,
@@ -186,90 +157,29 @@ async def create_data_sources(
     body: CreateSourcesRequest,
     tenant: Annotated[TenantCtx, Depends(require_auth)],
 ) -> DataSourcesResponse:
-    async with open_session() as session:
-        conn = await session.get(Connection, connection_id)
-        if conn is None or conn.organization_id != tenant.organization_id:
-            raise NotFoundError(
-                message="Connection not found",
-                code="CONNECTION_NOT_FOUND",
-                status_hint=404,
-            )
-        kind = conn.kind
-        credentials = dict(conn.credentials)
-
-    source = get_source_instance(kind)
-    refreshed = await source.authenticate({"credentials": credentials})
-    new_credentials = refreshed["credentials"]
-    now = datetime.now(UTC)
-
-    created_ids: list[UUID] = []
-    async with open_session() as session:
-        persistent_conn = await session.get(Connection, connection_id)
-        if persistent_conn is not None and new_credentials != credentials:
-            persistent_conn.credentials = new_credentials
-
-        for resource in body.resources:
-            ds = DataSource(
-                organization_id=tenant.organization_id,
-                connection_id=connection_id,
-                kind=kind,
-                name=resource.name,
-                config=_resource_config(kind, resource),
-                status=DataSourceStatus.ACTIVE,
-                created_by_user_id=tenant.user_id,
-            )
-            session.add(ds)
-            await session.flush()
-
-            try:
-                full_config = {**ds.config, "credentials": new_credentials}
-                schema = await source.introspect(full_config)
-                ds.discovered_schema = _schema_to_dict(schema)
-            except Exception as exc:
-                ds.status = DataSourceStatus.ERROR
-                ds.last_error = f"introspect failed: {exc}"
-
-            created_ids.append(ds.id)
-
-    # Sync each ACTIVE data source into the analytical substrate (DuckDB).
-    # Synchronous within the request for v1; promote to background worker later.
-    from app.substrate import sync_data_source as _substrate_sync
-
-    async with open_session() as session:
-        for ds_id in created_ids:
-            ds = await session.get(DataSource, ds_id)
-            if ds is None or ds.status != DataSourceStatus.ACTIVE:
-                continue
-            connection = await session.get(Connection, connection_id)
-            if connection is None:
-                continue
-            try:
-                await _substrate_sync(ds, connection)
-                ds.last_synced_at = now
-            except Exception as exc:
-                ds.status = DataSourceStatus.ERROR
-                ds.last_error = f"substrate sync failed: {exc}"
-
-    async with open_session() as session:
-        result = await session.execute(
-            select(DataSource).where(DataSource.id.in_(created_ids))
+    try:
+        result = await DataSourceOnboardingService().create_sources(
+            organization_id=tenant.organization_id,
+            user_id=tenant.user_id,
+            connection_id=connection_id,
+            resources=body.resources,
         )
-        sources = list(result.scalars().all())
+    except ConnectorError as exc:
+        raise AppError(
+            message=exc.message,
+            code=exc.code,
+            status_hint=exc.status_hint,
+            details={"connection_id": str(connection_id)},
+        ) from exc
 
-    return DataSourcesResponse(data_sources=[_ds_dto(s) for s in sources])
+    return DataSourcesResponse(data_sources=[_ds_dto(s) for s in result.data_sources])
 
 
 @router.get("/data-sources", response_model=DataSourcesResponse)
 async def list_data_sources(
     tenant: Annotated[TenantCtx, Depends(require_auth)],
 ) -> DataSourcesResponse:
-    async with open_session() as session:
-        result = await session.execute(
-            select(DataSource)
-            .where(DataSource.organization_id == tenant.organization_id)
-            .order_by(DataSource.created_at.desc())
-        )
-        sources = list(result.scalars().all())
+    sources = await list_data_source_records(tenant.organization_id)
     return DataSourcesResponse(data_sources=[_ds_dto(s) for s in sources])
 
 
@@ -278,12 +188,11 @@ async def get_data_source(
     source_id: UUID,
     tenant: Annotated[TenantCtx, Depends(require_auth)],
 ) -> DataSourceDTO:
-    async with open_session() as session:
-        ds = await session.get(DataSource, source_id)
-        if ds is None or ds.organization_id != tenant.organization_id:
-            raise NotFoundError(
-                message="Data source not found",
-                code="DATA_SOURCE_NOT_FOUND",
-                status_hint=404,
-            )
+    ds = await load_data_source_record(source_id, organization_id=tenant.organization_id)
+    if ds is None:
+        raise NotFoundError(
+            message="Data source not found",
+            code="DATA_SOURCE_NOT_FOUND",
+            status_hint=404,
+        )
     return _ds_dto(ds)

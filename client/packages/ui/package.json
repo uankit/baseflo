@@ -33,7 +33,7 @@
     }
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit -p tsconfig.lib.json"

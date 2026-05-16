@@ -74,10 +74,10 @@ class Settings(BaseSettings):
         default="http://localhost:5173", alias="BASEFLO_FRONTEND_URL"
     )
 
-    # Analytical substrate (DuckDB per-org files live under {data_dir}/duckdb/)
+    # Canonical data storage (DuckDB per-org files live under {data_dir}/duckdb/)
     data_dir: str = Field(default="./data", alias="BASEFLO_DATA_DIR")
 
-    # LLM orchestrator
+    # Agent model settings
     openai_api_key: SecretStr | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", alias="BASEFLO_OPENAI_MODEL")
     openai_agent_model: str | None = Field(
@@ -108,5 +108,5 @@ _settings: Settings | None = None
 def get_settings() -> Settings:
     global _settings
     if _settings is None:
-        _settings = Settings()
+        _settings = Settings()  # type: ignore[call-arg]
     return _settings

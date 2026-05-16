@@ -1,27 +1,27 @@
-"""Auth domain models.
-
-Only auth/tenant tables live here. Legacy (project, sources, insights, kpis,
-conversations) live in `_legacy_models.py` and are NOT loaded into
-`Base.metadata` by default — alembic autogen sees only this file.
-"""
+"""Database models for auth, connectors, and the packaged data/agent planes."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
-    Enum as SAEnum,
-    ForeignKey,
     Float,
+    ForeignKey,
     Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy import (
+    Enum as SAEnum,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import (
@@ -67,8 +67,8 @@ class Organization(Base, UUIDMixin, TimestampMixin):
         default=OrgPlan.FREE,
     )
 
-    memberships: Mapped[list["Membership"]] = relationship(back_populates="organization")
-    invitations: Mapped[list["Invitation"]] = relationship(back_populates="organization")
+    memberships: Mapped[list[Membership]] = relationship(back_populates="organization")
+    invitations: Mapped[list[Invitation]] = relationship(back_populates="organization")
 
 
 class User(Base, UUIDMixin, TimestampMixin):
@@ -81,8 +81,8 @@ class User(Base, UUIDMixin, TimestampMixin):
         default=UserStatus.ACTIVE,
     )
 
-    memberships: Mapped[list["Membership"]] = relationship(back_populates="user")
-    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(back_populates="user")
+    memberships: Mapped[list[Membership]] = relationship(back_populates="user")
+    refresh_tokens: Mapped[list[RefreshToken]] = relationship(back_populates="user")
 
 
 class Membership(Base, UUIDMixin, TimestampMixin):
@@ -90,10 +90,10 @@ class Membership(Base, UUIDMixin, TimestampMixin):
 
     __tablename__ = "memberships"
 
-    user_id: Mapped[PGUUID] = mapped_column(
+    user_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
@@ -124,14 +124,14 @@ class Membership(Base, UUIDMixin, TimestampMixin):
 class Invitation(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "invitations"
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[Role] = mapped_column(_pg_enum(Role, "member_role"), nullable=False)
-    invited_by_user_id: Mapped[PGUUID | None] = mapped_column(
+    invited_by_user_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -182,12 +182,12 @@ class RefreshToken(Base, UUIDMixin):
 
     __tablename__ = "refresh_tokens"
 
-    user_id: Mapped[PGUUID] = mapped_column(
+    user_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
@@ -199,7 +199,7 @@ class RefreshToken(Base, UUIDMixin):
     revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    replaced_by_id: Mapped[PGUUID | None] = mapped_column(
+    replaced_by_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("refresh_tokens.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -214,10 +214,10 @@ class AuthEvent(Base, UUIDMixin):
 
     __tablename__ = "auth_events"
 
-    user_id: Mapped[PGUUID | None] = mapped_column(
+    user_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
-    organization_id: Mapped[PGUUID | None] = mapped_column(
+    organization_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True
     )
     kind: Mapped[AuthEventKind] = mapped_column(
@@ -247,7 +247,7 @@ class Connection(Base, UUIDMixin, TimestampMixin):
 
     __tablename__ = "connections"
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
@@ -264,11 +264,11 @@ class Connection(Base, UUIDMixin, TimestampMixin):
         default=ConnectionStatus.ACTIVE,
     )
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_by_user_id: Mapped[PGUUID] = mapped_column(
+    created_by_user_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
 
-    sources: Mapped[list["DataSource"]] = relationship(back_populates="connection")
+    sources: Mapped[list[DataSource]] = relationship(back_populates="connection")
 
     __table_args__ = (
         UniqueConstraint(
@@ -284,12 +284,12 @@ class DataSource(Base, UUIDMixin, TimestampMixin):
 
     __tablename__ = "data_sources"
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    connection_id: Mapped[PGUUID] = mapped_column(
+    connection_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("connections.id", ondelete="CASCADE"),
         nullable=False,
@@ -311,7 +311,7 @@ class DataSource(Base, UUIDMixin, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_by_user_id: Mapped[PGUUID] = mapped_column(
+    created_by_user_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
 
@@ -323,208 +323,167 @@ class DataSource(Base, UUIDMixin, TimestampMixin):
     )
 
 
-class OperatingAsset(Base, UUIDMixin, TimestampMixin):
-    """A queryable business object Baseflo has discovered from connected data.
+class CanonicalSnapshot(Base, UUIDMixin, TimestampMixin):
+    """One immutable-ish ingestion attempt for a data source.
 
-    This is the first durable layer of the adaptive Business OS: it records what
-    exists without forcing the user into a template or pre-selected vertical.
+    The snapshot is data-layer metadata only. It records when Baseflo mirrored a
+    source into the canonical plane, how many assets/rows it saw, and any
+    source-neutral evidence needed to replay or debug the mirror.
     """
 
-    __tablename__ = "operating_assets"
+    __tablename__ = "canonical_snapshots"
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    data_source_id: Mapped[PGUUID | None] = mapped_column(
+    data_source_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("data_sources.id", ondelete="SET NULL"),
-        nullable=True,
+        ForeignKey("data_sources.id", ondelete="CASCADE"),
+        nullable=False,
     )
-    qualified_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    source_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    table_label: Mapped[str] = mapped_column(String(200), nullable=False)
-    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    column_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
-    profile: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    last_profiled_at: Mapped[datetime | None] = mapped_column(
+    snapshot_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    mode: Mapped[str] = mapped_column(String(40), nullable=False, default="full_refresh")
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="running")
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    asset_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSONB, nullable=False, default=dict
     )
 
     __table_args__ = (
         UniqueConstraint(
             "organization_id",
-            "qualified_name",
-            name="uq_operating_asset_org_qname",
+            "snapshot_key",
+            name="uq_canonical_snapshot_org_key",
         ),
-        Index("ix_operating_assets_org", "organization_id"),
-        Index("ix_operating_assets_source", "data_source_id"),
+        Index("ix_canonical_snapshots_org", "organization_id", "started_at"),
+        Index("ix_canonical_snapshots_source", "data_source_id", "started_at"),
     )
 
 
-class OperatingColumn(Base, UUIDMixin, TimestampMixin):
-    """A profiled column belonging to an OperatingAsset."""
+class CanonicalAsset(Base, UUIDMixin, TimestampMixin):
+    """A source-neutral asset physically mirrored into DuckDB.
 
-    __tablename__ = "operating_columns"
+    Examples: one spreadsheet tab, one Shopify collection, one JSON child-array,
+    one database table. This is not a business object; it is the canonical data
+    catalog node agents and profilers can rely on.
+    """
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    __tablename__ = "canonical_assets"
+
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    asset_id: Mapped[PGUUID] = mapped_column(
+    data_source_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("operating_assets.id", ondelete="CASCADE"),
+        ForeignKey("data_sources.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    snapshot_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("canonical_snapshots.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    asset_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    qualified_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_table: Mapped[str] = mapped_column(String(255), nullable=False)
+    label: Mapped[str] = mapped_column(String(255), nullable=False)
+    asset_type: Mapped[str] = mapped_column(String(60), nullable=False, default="table")
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    field_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSONB, nullable=False, default=dict
+    )
+    profile: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "qualified_name",
+            name="uq_canonical_asset_org_qname",
+        ),
+        Index("ix_canonical_assets_org", "organization_id"),
+        Index("ix_canonical_assets_source", "data_source_id"),
+        Index("ix_canonical_assets_snapshot", "snapshot_id"),
+    )
+
+
+class CanonicalField(Base, UUIDMixin, TimestampMixin):
+    """A physical field in a canonical asset."""
+
+    __tablename__ = "canonical_fields"
+
+    organization_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    asset_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("canonical_assets.id", ondelete="CASCADE"),
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    observed_type: Mapped[str] = mapped_column(String(40), nullable=False)
-    semantic_type: Mapped[str] = mapped_column(String(60), nullable=False)
-    null_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    unique_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_type: Mapped[str] = mapped_column(String(40), nullable=False, default="varchar")
+    observed_type: Mapped[str] = mapped_column(String(40), nullable=False, default="unknown")
+    nullable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sample_values: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     profile: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     __table_args__ = (
-        UniqueConstraint("asset_id", "name", name="uq_operating_column_asset_name"),
-        Index("ix_operating_columns_org", "organization_id"),
-        Index("ix_operating_columns_asset", "asset_id"),
+        UniqueConstraint("asset_id", "name", name="uq_canonical_field_asset_name"),
+        Index("ix_canonical_fields_org", "organization_id"),
+        Index("ix_canonical_fields_asset", "asset_id"),
     )
 
 
-class OperatingRelationship(Base, UUIDMixin, TimestampMixin):
-    """A candidate or confirmed relationship inferred across operating assets."""
+class DataGraphEdge(Base, UUIDMixin, TimestampMixin):
+    """A typed edge in Baseflo's source-neutral data graph.
 
-    __tablename__ = "operating_relationships"
+    Edges intentionally use string node ids so the graph can link different
+    node kinds without a polymorphic-FK maze: sources, snapshots, canonical
+    assets, fields, source paths, future structure maps, and external records.
+    """
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    __tablename__ = "data_graph_edges"
+
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    left_asset_id: Mapped[PGUUID] = mapped_column(
+    snapshot_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("operating_assets.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    right_asset_id: Mapped[PGUUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("operating_assets.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    left_column: Mapped[str] = mapped_column(String(255), nullable=False)
-    right_column: Mapped[str] = mapped_column(String(255), nullable=False)
-    relationship_kind: Mapped[str] = mapped_column(String(40), nullable=False)
-    status: Mapped[str] = mapped_column(String(40), nullable=False, default="candidate")
-    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-
-    __table_args__ = (
-        Index("ix_operating_relationships_org", "organization_id"),
-        Index("ix_operating_relationships_left", "left_asset_id"),
-        Index("ix_operating_relationships_right", "right_asset_id"),
-    )
-
-
-class MetricDefinition(Base, UUIDMixin, TimestampMixin):
-    """A tracked, data-grounded metric compiled from the operating model."""
-
-    __tablename__ = "metric_definitions"
-
-    organization_id: Mapped[PGUUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    asset_id: Mapped[PGUUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("operating_assets.id", ondelete="SET NULL"),
+        ForeignKey("canonical_snapshots.id", ondelete="SET NULL"),
         nullable=True,
     )
-    key: Mapped[str] = mapped_column(String(255), nullable=False)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
-    metric_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    expression_sql: Mapped[str] = mapped_column(Text, nullable=False)
-    grain: Mapped[str | None] = mapped_column(String(80), nullable=True)
-    status: Mapped[str] = mapped_column(String(40), nullable=False, default="candidate")
-    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    subject_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    predicate: Mapped[str] = mapped_column(String(120), nullable=False)
+    object_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    object_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     created_by: Mapped[str] = mapped_column(String(80), nullable=False, default="system")
-
-    __table_args__ = (
-        UniqueConstraint("organization_id", "key", name="uq_metric_definition_org_key"),
-        Index("ix_metric_definitions_org", "organization_id"),
-        Index("ix_metric_definitions_asset", "asset_id"),
-    )
-
-
-class MetricValue(Base, UUIDMixin):
-    """A computed metric value at a point in time."""
-
-    __tablename__ = "metric_values"
-
-    organization_id: Mapped[PGUUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    metric_id: Mapped[PGUUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("metric_definitions.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    value: Mapped[float | None] = mapped_column(Float, nullable=True)
-    value_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    period_start: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    period_end: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    computed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
     evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     __table_args__ = (
-        Index("ix_metric_values_org_computed", "organization_id", "computed_at"),
-        Index("ix_metric_values_metric_computed", "metric_id", "computed_at"),
-    )
-
-
-class Insight(Base, UUIDMixin, TimestampMixin):
-    """A grounded finding produced by the Watcher or starter analysis."""
-
-    __tablename__ = "insights"
-
-    organization_id: Mapped[PGUUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    kind: Mapped[str] = mapped_column(String(60), nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    summary: Mapped[str] = mapped_column(Text, nullable=False)
-    severity: Mapped[str] = mapped_column(String(40), nullable=False, default="info")
-    status: Mapped[str] = mapped_column(String(40), nullable=False, default="open")
-    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    impact_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    source: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    detected_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    dismissed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-
-    __table_args__ = (
-        Index("ix_insights_org_status", "organization_id", "status", "detected_at"),
-        Index("ix_insights_org_kind", "organization_id", "kind", "detected_at"),
+        Index("ix_data_graph_edges_org_predicate", "organization_id", "predicate"),
+        Index("ix_data_graph_edges_subject", "subject_type", "subject_id"),
+        Index("ix_data_graph_edges_object", "object_type", "object_id"),
+        Index("ix_data_graph_edges_snapshot", "snapshot_id"),
     )
 
 
@@ -533,91 +492,209 @@ class BusinessMemory(Base, UUIDMixin, TimestampMixin):
 
     __tablename__ = "business_memories"
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
     key: Mapped[str] = mapped_column(String(255), nullable=False)
     value: Mapped[str] = mapped_column(Text, nullable=False)
+    kind: Mapped[str] = mapped_column(String(80), nullable=False, default="note")
+    scope: Mapped[str] = mapped_column(String(80), nullable=False, default="org")
+    subject_ref: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    evidence_refs: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSONB, nullable=False, default=dict
+    )
     source: Mapped[str] = mapped_column(String(80), nullable=False, default="user")
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     last_confirmed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint("organization_id", "key", name="uq_business_memory_org_key"),
         Index("ix_business_memories_org", "organization_id"),
+        Index("ix_business_memories_org_kind", "organization_id", "kind"),
+        Index("ix_business_memories_org_scope", "organization_id", "scope"),
     )
 
 
-class ActionProposal(Base, UUIDMixin, TimestampMixin):
-    """A controlled next step proposed by Baseflo, never executed silently."""
+class Run(Base, UUIDMixin, TimestampMixin):
+    """Durable async run envelope used by REST polling and SSE streams."""
 
-    __tablename__ = "action_proposals"
+    __tablename__ = "runs"
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="queued")
+    request: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    error: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_runs_org_status", "organization_id", "status"),
+        Index("ix_runs_org_kind_created", "organization_id", "kind", "created_at"),
+    )
+
+
+class RunEvent(Base, UUIDMixin):
+    """Durable event emitted during an async run."""
+
+    __tablename__ = "run_events"
+
+    run_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("runs.id", ondelete="CASCADE"), nullable=False
+    )
+    organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    type: Mapped[str] = mapped_column(String(160), nullable=False)
+    stage: Mapped[str] = mapped_column(String(120), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    progress: Mapped[float | None] = mapped_column(Float, nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("ix_run_events_run_created", "run_id", "created_at"),
+        Index("ix_run_events_org_created", "organization_id", "created_at"),
+    )
+
+
+class AgentCacheEntry(Base, UUIDMixin):
+    """Cached typed agent output keyed by agent, model, and canonical input hash."""
+
+    __tablename__ = "agent_cache_entries"
+
+    scope_key: Mapped[str] = mapped_column(String(120), nullable=False, default="global")
+    agent_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    output: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    hit_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "scope_key",
+            "agent_name",
+            "model_name",
+            "input_hash",
+            name="uq_agent_cache_agent_model_input",
+        ),
+        Index("ix_agent_cache_scope_agent_last_used", "scope_key", "agent_name", "last_used_at"),
+    )
+
+
+class OperatingArtifact(Base, UUIDMixin, TimestampMixin):
+    """Durable product artifact produced from operating runs.
+
+    The Artifact Plane owns the stable read model for Brief, Inbox, Ask, and
+    future surfaces. It stores typed UI-ready payloads without tying the backend
+    to a particular screen layout.
+    """
+
+    __tablename__ = "operating_artifacts"
+
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    insight_id: Mapped[PGUUID | None] = mapped_column(
+    run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    artifact_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    kind: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="new")
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    why: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    tags: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
+    priority: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    source_refs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "artifact_key", name="uq_operating_artifact_org_key"),
+        Index("ix_operating_artifacts_org_kind_status", "organization_id", "kind", "status"),
+        Index("ix_operating_artifacts_org_last_seen", "organization_id", "last_seen_at"),
+        Index("ix_operating_artifacts_run", "run_id"),
+    )
+
+
+class OperatingAction(Base, UUIDMixin, TimestampMixin):
+    """Prepared/internal action created from a supported action artifact."""
+
+    __tablename__ = "operating_actions"
+
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("insights.id", ondelete="SET NULL"),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    artifact_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("operating_artifacts.id", ondelete="SET NULL"),
         nullable=True,
     )
-    kind: Mapped[str] = mapped_column(String(80), nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    action_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(80), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="proposed")
-    proposed_payload: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict
-    )
-    approval_scope: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict
-    )
-    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_by_agent: Mapped[str] = mapped_column(String(80), nullable=False)
-    approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    executed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    why: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source_refs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    prepared_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    prepared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
-        UniqueConstraint("organization_id", "idempotency_key", name="uq_action_org_key"),
-        Index("ix_action_proposals_org_status", "organization_id", "status"),
+        UniqueConstraint("organization_id", "action_key", name="uq_operating_action_org_key"),
+        Index("ix_operating_actions_org_status", "organization_id", "status"),
+        Index("ix_operating_actions_org_type", "organization_id", "action_type"),
+        Index("ix_operating_actions_artifact", "artifact_id"),
+        Index("ix_operating_actions_run", "run_id"),
     )
 
 
-class AuditEvent(Base, UUIDMixin):
-    """Append-only governance record for intelligence and action events."""
+class SavedCohort(Base, UUIDMixin, TimestampMixin):
+    """Saved audience/cohort produced by Action Plane v1."""
 
-    __tablename__ = "audit_events"
+    __tablename__ = "saved_cohorts"
 
-    organization_id: Mapped[PGUUID] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    actor_user_id: Mapped[PGUUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    action_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("operating_actions.id", ondelete="SET NULL"),
+        nullable=True,
     )
-    actor_type: Mapped[str] = mapped_column(String(40), nullable=False)
-    action: Mapped[str] = mapped_column(String(120), nullable=False)
-    target_type: Mapped[str] = mapped_column(String(80), nullable=False)
-    target_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    metadata_: Mapped[dict[str, Any]] = mapped_column(
-        "metadata", JSONB, nullable=False, default=dict
-    )
-    occurred_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    cohort_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    name: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    audience: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    rows: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
+    source_refs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     __table_args__ = (
-        Index("ix_audit_events_org_time", "organization_id", "occurred_at"),
-        Index("ix_audit_events_org_action", "organization_id", "action", "occurred_at"),
+        UniqueConstraint("organization_id", "cohort_key", name="uq_saved_cohort_org_key"),
+        Index("ix_saved_cohorts_org", "organization_id"),
+        Index("ix_saved_cohorts_action", "action_id"),
     )
