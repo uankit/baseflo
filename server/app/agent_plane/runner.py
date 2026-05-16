@@ -154,6 +154,8 @@ class AgentRunner:
         base_seconds = settings.openai_agent_retry_base_seconds or spec.retry_policy.base_seconds
         max_seconds = settings.openai_agent_retry_max_seconds or spec.retry_policy.max_seconds
         message = _model_error_message(exc)
+        if "request too large" in message.lower() or "tokens must be reduced" in message.lower():
+            return None
         match = re.search(r"try again in\s+([0-9.]+)s", message, flags=re.IGNORECASE)
         if match:
             return min(max_seconds, float(match.group(1)) + 0.5)

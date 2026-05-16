@@ -1,9 +1,10 @@
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import type { AvailableResource } from '@baseflo/api-client';
+import type { AvailableResource, RunEvent } from '@baseflo/api-client';
 import { useGateway } from '../providers/GatewayProvider.js';
 import { startOperatingRunWithEvents } from '../features/operating/api/runStream.js';
+import { RunProgress } from '../features/operating/components/RunProgress.js';
 import { ScreenFrame, SecondaryButton } from '../features/common/components/StatePanels.js';
 
 export const Route = createFileRoute('/connections/$connectionId/pick')({
@@ -25,6 +26,9 @@ function PickConnectionResourcesPage() {
   const gateway = useGateway();
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [runEvents, setRunEvents] = useState<RunEvent[]>([]);
+  const [runError, setRunError] = useState<Error | null>(null);
+  const [isRunningOperatingRun, setIsRunningOperatingRun] = useState(false);
 
   const resourcesQuery = useQuery({
     queryKey: ['connection-resources', connectionId],
@@ -42,9 +46,25 @@ function PickConnectionResourcesPage() {
 
   const createSources = useMutation({
     mutationFn: (items: AvailableResource[]) => gateway.data.createSources(connectionId, items),
+    onMutate: () => {
+      setRunEvents([]);
+      setRunError(null);
+      setIsRunningOperatingRun(false);
+    },
     onSuccess: async () => {
-      await startOperatingRunWithEvents(gateway, { mode: 'scan' });
-      navigate({ to: '/workspace/business', replace: true });
+      setIsRunningOperatingRun(true);
+      try {
+        await startOperatingRunWithEvents(gateway, { mode: 'scan' }, (event) => {
+          setRunEvents((current) => [...current, event]);
+        });
+        navigate({ to: '/workspace/business', replace: true });
+      } catch (error) {
+        const normalized = error instanceof Error ? error : new Error(String(error));
+        setRunError(normalized);
+        throw normalized;
+      } finally {
+        setIsRunningOperatingRun(false);
+      }
     },
   });
 
@@ -69,6 +89,11 @@ function PickConnectionResourcesPage() {
             {createSources.isPending ? 'Building Business Live...' : `Use ${selectedResources.length} selected`}
           </button>
         </div>
+        <RunProgress
+          events={runEvents}
+          isRunning={createSources.isPending || isRunningOperatingRun}
+          error={runError}
+        />
 
         <section className="border border-ink/25 bg-paper-soft">
           <div className="border-b border-ink/20 px-4 py-3">

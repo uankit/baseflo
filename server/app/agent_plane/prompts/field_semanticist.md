@@ -6,7 +6,7 @@ Classify fields within one asset into typed field roles.
 You receive:
 - BusinessModel.
 - One AssetRole.
-- One canonical asset with exact field ids, field names, observed types, sample values, and profile evidence.
+- One compact canonical asset with exact field ids, field names, observed types, sample values, and profile evidence.
 
 Rules:
 - Return exactly one FieldRole for each non-system field in the input.

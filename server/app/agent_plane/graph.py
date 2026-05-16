@@ -14,7 +14,12 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.agent_plane.context import context_payload, load_canonical_context
+from app.agent_plane.context import (
+    compact_asset_payload,
+    compact_context_payload,
+    compact_field_catalog,
+    load_canonical_context,
+)
 from app.agent_plane.contracts import (
     ActionBatch,
     AssetEvidence,
@@ -116,7 +121,7 @@ class AgentPlane:
     async def _business_understanding(self, context: CanonicalContextPack) -> BusinessModel:
         output = await self.runner.run(
             get_agent_spec("business_understander"),
-            {"canonical_context": context_payload(context)},
+            {"canonical_context": compact_context_payload(context)},
         )
         return _typed(output, BusinessModel)
 
@@ -130,7 +135,7 @@ class AgentPlane:
                 get_agent_spec("asset_semanticist"),
                 {
                     "business_model": business_model.model_dump(mode="json"),
-                    "asset": asset.model_dump(mode="json"),
+                    "asset": compact_asset_payload(asset, include_preview_rows=True),
                 },
             )
             return _typed(output, AssetRole)
@@ -151,7 +156,7 @@ class AgentPlane:
                 {
                     "business_model": business_model.model_dump(mode="json"),
                     "asset_role": role_by_asset[asset.asset_id].model_dump(mode="json"),
-                    "asset": asset.model_dump(mode="json"),
+                    "asset": compact_asset_payload(asset, include_preview_rows=False),
                 },
             )
             return _typed(output, FieldRoleBatch)
@@ -207,11 +212,7 @@ class AgentPlane:
         patterns: PatternBatch,
         run_focus: dict[str, Any],
     ) -> list[AnalysisGraphPlan]:
-        field_catalog = [
-            field.model_dump(mode="json")
-            for asset in context.assets
-            for field in asset.fields
-        ]
+        field_catalog = compact_field_catalog(context)
 
         async def _run(hypothesis: PatternHypothesis) -> AnalysisGraphPlan:
             output = await self.runner.run(

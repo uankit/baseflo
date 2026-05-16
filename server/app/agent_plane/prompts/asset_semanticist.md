@@ -5,7 +5,7 @@ Classify one canonical asset into an open business role.
 
 You receive:
 - The BusinessModel.
-- Exactly one canonical asset with fields, metadata, profile, and preview rows.
+- Exactly one compact canonical asset with fields, metadata, profile summary, and small preview snippets.
 
 Rules:
 - Use the exact asset_id from input.
