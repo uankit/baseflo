@@ -130,3 +130,146 @@ def test_business_overview_payload_stays_small_for_wide_workbooks() -> None:
     assert len(payload["assets"]) == 16
     assert all(len(asset["fields"]) <= 12 for asset in payload["assets"])
     assert len(encoded) < 80_000
+
+
+def test_relationship_mapper_payload_stays_small_for_wide_workbooks() -> None:
+    from app.agent_plane.context import relationship_mapper_payload
+    from app.agent_plane.contracts import (
+        AssetEvidence,
+        AssetRole,
+        BusinessModel,
+        CanonicalContextPack,
+        FieldEvidence,
+        FieldRole,
+        GraphEdgeEvidence,
+    )
+
+    assets = []
+    asset_roles = []
+    field_roles = []
+    graph_edges = []
+    for asset_index in range(40):
+        asset_id = f"asset-{asset_index}"
+        fields = [
+            FieldEvidence(
+                field_id=f"field-{asset_index}-{field_index}",
+                asset_id=asset_id,
+                name=f"Detailed Field {asset_index} {field_index}",
+                ordinal=field_index,
+                storage_type="varchar",
+                observed_type="text",
+                nullable=True,
+                sample_values=["long sample value that should not be carried into relationship mapper"],
+            )
+            for field_index in range(120)
+        ]
+        assets.append(
+            AssetEvidence(
+                asset_id=asset_id,
+                data_source_id="source-1",
+                snapshot_id="snapshot-1",
+                asset_key=f"tab_{asset_index}",
+                qualified_name=f"sheet__tab_{asset_index}",
+                storage_table=f"sheet__tab_{asset_index}",
+                label=f"Sheet Tab {asset_index}",
+                asset_type="table",
+                row_count=1000,
+                field_count=len(fields),
+                fields=fields,
+            )
+        )
+        asset_roles.append(
+            AssetRole(
+                asset_id=asset_id,
+                role="records",
+                entity_type=f"entity_{asset_index}",
+                label=f"Sheet Tab {asset_index}",
+                tags=["source"],
+                why="A compact reason that should be trimmed if too long.",
+                confidence=0.8,
+            )
+        )
+        for field_index in range(120):
+            role = "identifier" if field_index % 11 == 0 else "measure"
+            field_roles.append(
+                FieldRole(
+                    field_id=f"field-{asset_index}-{field_index}",
+                    asset_id=asset_id,
+                    field_name=f"Detailed Field {asset_index} {field_index}",
+                    semantic_type="identifier" if role == "identifier" else "amount",
+                    role=role,
+                    why="This role was inferred from compact profiler evidence.",
+                    confidence=0.7,
+                )
+            )
+
+    for edge_index in range(160):
+        left_asset = edge_index % 40
+        right_asset = (edge_index + 1) % 40
+        graph_edges.append(
+            GraphEdgeEvidence(
+                edge_id=f"edge-{edge_index}",
+                snapshot_id="snapshot-1",
+                subject_type="canonical_field",
+                subject_id=f"canonical_field:field-{left_asset}-0",
+                predicate="RELATIONSHIP_CANDIDATE",
+                object_type="canonical_field",
+                object_id=f"canonical_field:field-{right_asset}-0",
+                status="active",
+                confidence=0.9,
+                created_by="data_profiler_v1",
+                evidence={
+                    "left_asset_id": f"asset-{left_asset}",
+                    "left_field_id": f"field-{left_asset}-0",
+                    "right_asset_id": f"asset-{right_asset}",
+                    "right_field_id": f"field-{right_asset}-0",
+                    "cardinality": "many_to_many",
+                    "overlap_ratio": 0.8,
+                    "shared_value_count": 200,
+                    "sample_shared_values": ["Acme", "Globex", "Very long shared value" * 20],
+                    "reasons": ["High value overlap", "Compatible profiler roles"],
+                },
+            )
+        )
+    graph_edges.append(
+        GraphEdgeEvidence(
+            edge_id="lineage-edge",
+            snapshot_id="snapshot-1",
+            subject_type="canonical_asset",
+            subject_id="canonical_asset:asset-1",
+            predicate="HAS_FIELD",
+            object_type="canonical_field",
+            object_id="canonical_field:field-1-1",
+            status="active",
+            confidence=1.0,
+            created_by="canonicalizer",
+            evidence={"large": "lineage edge should not be included" * 100},
+        )
+    )
+    context = CanonicalContextPack(
+        organization_id="org-1",
+        snapshots=[],
+        assets=assets,
+        graph_edges=graph_edges,
+        memories=[],
+    )
+    business_model = BusinessModel(
+        paragraph="A compact business summary.",
+        business_kind="operations",
+        entities=[],
+        primary_kpis=[],
+        confidence=0.8,
+    )
+
+    payload = relationship_mapper_payload(
+        context,
+        business_model=business_model,
+        asset_roles=asset_roles,
+        field_roles=field_roles,
+    )
+    encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+    assert len(payload["graph_edges"]) == 40
+    assert all(edge["predicate"] == "RELATIONSHIP_CANDIDATE" for edge in payload["graph_edges"])
+    assert len(payload["field_roles"]) <= 480
+    assert len(encoded) < 95_000

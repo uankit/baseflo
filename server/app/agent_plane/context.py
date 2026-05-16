@@ -21,6 +21,18 @@ _MAX_BUSINESS_FIELDS_PER_ASSET = 12
 _MAX_BUSINESS_GRAPH_EDGES = 40
 _MAX_BUSINESS_MEMORIES = 8
 _MAX_BUSINESS_SAMPLE_VALUES = 1
+_MAX_RELATIONSHIP_ASSETS = 60
+_MAX_RELATIONSHIP_FIELDS = 240
+_MAX_RELATIONSHIP_FIELDS_PER_ASSET = 10
+_MAX_RELATIONSHIP_EDGES = 40
+_RELATIONSHIP_FIELD_ROLES = {
+    "primary_key",
+    "foreign_key",
+    "identifier",
+    "label",
+    "category",
+    "status",
+}
 
 
 async def load_canonical_context(
@@ -143,6 +155,41 @@ def business_overview_payload(context: CanonicalContextPack) -> dict[str, Any]:
     }
 
 
+def relationship_mapper_payload(
+    context: CanonicalContextPack,
+    *,
+    business_model: Any,
+    asset_roles: list[Any],
+    field_roles: list[Any],
+) -> dict[str, Any]:
+    """Relationship-focused prompt view for RelationshipMapper.
+
+    The mapper needs business nouns, asset roles, semantic key fields, and
+    deterministic relationship candidates. It does not need every field role or
+    lineage edge in a wide workbook.
+    """
+    relationship_edges = _relationship_edges(context.graph_edges)
+    edge_field_ids = _edge_field_ids(relationship_edges)
+    return {
+        "organization_id": context.organization_id,
+        "business_model": _relationship_business_model_payload(business_model),
+        "asset_roles": [
+            _relationship_asset_role_payload(role)
+            for role in asset_roles[:_MAX_RELATIONSHIP_ASSETS]
+        ],
+        "field_roles": _relationship_field_roles(field_roles, edge_field_ids=edge_field_ids),
+        "graph_edges": [_relationship_edge_payload(edge) for edge in relationship_edges],
+        "limits": {
+            "field_selection": (
+                "Only relationship-relevant fields are shown: keys, identifiers, labels, "
+                "status/category fields, and fields referenced by deterministic relationship candidates."
+            ),
+            "edge_selection": "Only RELATIONSHIP_CANDIDATE graph edges are shown.",
+            "full_data_available_to_execution": True,
+        },
+    }
+
+
 def _business_asset_payload(asset: AssetEvidence) -> dict[str, Any]:
     profile = _asset_profile_summary(asset.profile)
     return {
@@ -207,6 +254,173 @@ def _business_field_payload(field: FieldEvidence) -> dict[str, Any]:
             for value in field.sample_values[:_MAX_BUSINESS_SAMPLE_VALUES]
         ],
     }
+
+
+def _relationship_business_model_payload(model: Any) -> dict[str, Any]:
+    data = _model_payload(model)
+    return {
+        "paragraph": _compact_value(data.get("paragraph")),
+        "business_kind": _compact_value(data.get("business_kind")),
+        "primary_currency": _compact_value(data.get("primary_currency")),
+        "entities": [
+            {
+                "name": _compact_value(entity.get("name")),
+                "plural": _compact_value(entity.get("plural")),
+                "primary_asset_id": _compact_value(entity.get("primary_asset_id")),
+                "related_asset_ids": _compact_list(entity.get("related_asset_ids"), max_items=12),
+            }
+            for entity in _compact_list(data.get("entities"), max_items=30)
+            if isinstance(entity, dict)
+        ],
+        "primary_kpis": [
+            {
+                "name": _compact_value(kpi.get("name")),
+                "field_refs": _compact_list(kpi.get("field_refs"), max_items=8),
+                "source_asset_ids": _compact_list(kpi.get("source_asset_ids"), max_items=8),
+            }
+            for kpi in _compact_list(data.get("primary_kpis"), max_items=20)
+            if isinstance(kpi, dict)
+        ],
+        "useful_lenses": _compact_list(data.get("useful_lenses"), max_items=12),
+        "confidence": data.get("confidence"),
+    }
+
+
+def _relationship_asset_role_payload(role: Any) -> dict[str, Any]:
+    data = _model_payload(role)
+    return {
+        "asset_id": _compact_value(data.get("asset_id")),
+        "role": _compact_value(data.get("role")),
+        "entity_type": _compact_value(data.get("entity_type")),
+        "label": _compact_value(data.get("label")),
+        "tags": _compact_list(data.get("tags"), max_items=8),
+        "confidence": data.get("confidence"),
+    }
+
+
+def _relationship_field_roles(
+    roles: list[Any],
+    *,
+    edge_field_ids: set[str],
+) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for role in roles:
+        data = _model_payload(role)
+        field_id = str(data.get("field_id") or "")
+        asset_id = str(data.get("asset_id") or "")
+        role_name = str(data.get("role") or "")
+        semantic_type = str(data.get("semantic_type") or "")
+        if not field_id or not asset_id:
+            continue
+        if (
+            field_id not in edge_field_ids
+            and role_name not in _RELATIONSHIP_FIELD_ROLES
+            and not _looks_relationship_relevant(semantic_type, data.get("field_name"))
+        ):
+            continue
+        grouped.setdefault(asset_id, []).append(
+            {
+                "field_id": _compact_value(field_id),
+                "asset_id": _compact_value(asset_id),
+                "field_name": _compact_value(data.get("field_name")),
+                "semantic_type": _compact_value(semantic_type),
+                "role": _compact_value(role_name),
+                "entity_hint": _compact_value(data.get("entity_hint")),
+                "measure_kind": _compact_value(data.get("measure_kind")),
+                "confidence": data.get("confidence"),
+            }
+        )
+
+    selected: list[dict[str, Any]] = []
+    for asset_id in sorted(grouped):
+        fields = sorted(
+            grouped[asset_id],
+            key=lambda item: (
+                _relationship_role_rank(str(item.get("role") or "")),
+                -(float(item.get("confidence") or 0.0)),
+                str(item.get("field_name") or ""),
+            ),
+        )
+        selected.extend(fields[:_MAX_RELATIONSHIP_FIELDS_PER_ASSET])
+        if len(selected) >= _MAX_RELATIONSHIP_FIELDS:
+            break
+    return selected[:_MAX_RELATIONSHIP_FIELDS]
+
+
+def _relationship_edges(edges: list[Any]) -> list[Any]:
+    return sorted(
+        [
+            edge
+            for edge in edges
+            if _model_payload(edge).get("predicate") == "RELATIONSHIP_CANDIDATE"
+        ],
+        key=lambda edge: -(float(_model_payload(edge).get("confidence") or 0.0)),
+    )[:_MAX_RELATIONSHIP_EDGES]
+
+
+def _relationship_edge_payload(edge: Any) -> dict[str, Any]:
+    data = _model_payload(edge)
+    evidence_value = data.get("evidence")
+    evidence = evidence_value if isinstance(evidence_value, dict) else {}
+    return {
+        "edge_id": _compact_value(data.get("edge_id")),
+        "subject_id": _compact_value(data.get("subject_id")),
+        "predicate": _compact_value(data.get("predicate")),
+        "object_id": _compact_value(data.get("object_id")),
+        "confidence": data.get("confidence"),
+        "evidence": {
+            "left_asset_id": _compact_value(evidence.get("left_asset_id")),
+            "left_field_id": _compact_value(evidence.get("left_field_id")),
+            "right_asset_id": _compact_value(evidence.get("right_asset_id")),
+            "right_field_id": _compact_value(evidence.get("right_field_id")),
+            "cardinality": _compact_value(evidence.get("cardinality")),
+            "overlap_ratio": evidence.get("overlap_ratio"),
+            "shared_value_count": evidence.get("shared_value_count"),
+            "sample_shared_values": _compact_list(evidence.get("sample_shared_values"), max_items=3),
+            "reasons": _compact_list(evidence.get("reasons"), max_items=3),
+        },
+    }
+
+
+def _edge_field_ids(edges: list[Any]) -> set[str]:
+    field_ids: set[str] = set()
+    for edge in edges:
+        data = _model_payload(edge)
+        evidence_value = data.get("evidence")
+        evidence = evidence_value if isinstance(evidence_value, dict) else {}
+        for value in (
+            evidence.get("left_field_id"),
+            evidence.get("right_field_id"),
+            str(data.get("subject_id") or "").removeprefix("canonical_field:"),
+            str(data.get("object_id") or "").removeprefix("canonical_field:"),
+        ):
+            if value:
+                field_ids.add(str(value))
+    return field_ids
+
+
+def _relationship_role_rank(role: str) -> int:
+    ranks = {
+        "primary_key": 0,
+        "foreign_key": 1,
+        "identifier": 2,
+        "label": 3,
+        "category": 4,
+        "status": 5,
+    }
+    return ranks.get(role, 20)
+
+
+def _looks_relationship_relevant(semantic_type: str, field_name: Any) -> bool:
+    blob = f"{semantic_type} {field_name or ''}".lower()
+    return any(token in blob for token in ("id", "key", "code", "name", "party", "customer", "vendor", "supplier"))
+
+
+def _model_payload(value: Any) -> dict[str, Any]:
+    if hasattr(value, "model_dump"):
+        dumped = value.model_dump(mode="json")
+        return dumped if isinstance(dumped, dict) else {}
+    return value if isinstance(value, dict) else {}
 
 
 def compact_asset_payload(

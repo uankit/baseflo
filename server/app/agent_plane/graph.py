@@ -19,6 +19,7 @@ from app.agent_plane.context import (
     compact_asset_payload,
     compact_field_catalog,
     load_canonical_context,
+    relationship_mapper_payload,
 )
 from app.agent_plane.contracts import (
     ActionBatch,
@@ -173,12 +174,12 @@ class AgentPlane:
     ) -> BusinessGraph:
         output = await self.runner.run(
             get_agent_spec("relationship_mapper"),
-            {
-                "business_model": business_model.model_dump(mode="json"),
-                "asset_roles": [role.model_dump(mode="json") for role in asset_roles],
-                "field_roles": [role.model_dump(mode="json") for role in field_roles],
-                "graph_edges": [edge.model_dump(mode="json") for edge in context.graph_edges],
-            },
+            relationship_mapper_payload(
+                context,
+                business_model=business_model,
+                asset_roles=asset_roles,
+                field_roles=field_roles,
+            ),
         )
         return _typed(output, BusinessGraph)
 
