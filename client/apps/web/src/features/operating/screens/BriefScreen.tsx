@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { Counter } from '@baseflo/ui/composites';
 import { useBriefArtifact, useInsightRanking } from '../api/useOperatingData.js';
 import { EmptyPanel, ErrorPanel, LoadingPanel, ScreenFrame, SecondaryButton } from '../../common/components/StatePanels.js';
 import { TagList, WhyPanel } from '../components/WhyPanel.js';
@@ -13,7 +14,7 @@ export function BriefScreen() {
 
   if (brief.isPending) {
     return (
-      <ScreenFrame eyebrow="brief" title="Preparing today’s operating brief">
+      <ScreenFrame eyebrow="brief" title="Preparing today's operating brief">
         <LoadingPanel />
       </ScreenFrame>
     );
@@ -43,30 +44,32 @@ export function BriefScreen() {
     );
   }
 
+  const body = briefPackage.body || briefPackage.summary_points?.join('\n\n') || '';
+
   return (
-    <ScreenFrame
-      eyebrow="today’s brief · generated from the latest run"
-      title={briefPackage.headline}
-      summary={briefPackage.summary_points.join(' ')}
-    >
+    <ScreenFrame eyebrow="today's brief" title={briefPackage.headline}>
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <section className="space-y-4">
-          {briefPackage.summary_points.map((point, index) => (
-            <article key={point} className="border border-ink/25 bg-paper-soft p-5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink/40">
-                brief point {index + 1}
-              </p>
-              <p className="mt-2 text-lg leading-7 text-ink">{point}</p>
-            </article>
-          ))}
+        <section className="space-y-5">
+          <article className="border border-ink/25 bg-paper-soft p-6 shadow-[3px_3px_0_rgba(28,25,20,0.1)]">
+            <div
+              className="prose prose-neutral max-w-none text-base leading-7 text-ink/80"
+              style={{ whiteSpace: 'pre-wrap' }}
+            >
+              {body}
+            </div>
+          </article>
+
           {rankingPackage?.ranked.length ? (
-            <section className="mt-8">
+            <section>
               <p className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-ink/45">
                 ranked operating items
               </p>
               <div className="space-y-3">
                 {rankingPackage.ranked.slice(0, 8).map((item) => (
-                  <article key={`${item.item_kind}:${item.item_id}`} className="border border-ink/20 bg-paper-soft p-4">
+                  <article
+                    key={`${item.item_kind}:${item.item_id}`}
+                    className="border border-ink/20 bg-paper-soft p-4 shadow-[2px_2px_0_rgba(28,25,20,0.06)]"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/40">
@@ -86,17 +89,25 @@ export function BriefScreen() {
             </section>
           ) : null}
         </section>
+
         <aside className="space-y-4">
           <WhyPanel title="why this brief">{briefPackage.why}</WhyPanel>
-          <div className="border border-ink/20 bg-paper-soft p-4">
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-ink/45">
-              urgent refs
-            </p>
-            <p className="mt-2 font-serif text-4xl font-bold italic text-ink">
-              {briefPackage.urgent_artifact_ids.length}
-            </p>
-            <p className="mt-1 text-xs text-ink/55">artifact ids attached by the backend</p>
-          </div>
+
+          {briefPackage.urgent_artifact_ids?.length ? (
+            <div className="border border-flame/30 bg-flame/[0.03] p-4 shadow-[2px_2px_0_rgba(220,84,37,0.15)]">
+              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-ink/45">
+                urgent items
+              </p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <Counter
+                  value={briefPackage.urgent_artifact_ids.length}
+                  animate
+                  className="font-serif text-5xl font-bold italic text-flame"
+                />
+                <span className="text-sm text-ink/55">needs attention</span>
+              </div>
+            </div>
+          ) : null}
         </aside>
       </div>
     </ScreenFrame>

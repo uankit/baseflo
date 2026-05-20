@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/not-found')({
   component: NotFoundPage,
@@ -6,11 +6,16 @@ export const Route = createFileRoute('/not-found')({
 
 function NotFoundPage() {
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-950 text-gray-500">
+    <div className="flex h-screen items-center justify-center bg-paper text-ink">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold text-white">404</h1>
-        <p className="mt-2">Page not found</p>
-        <a href="/" className="mt-4 inline-block text-sm text-gray-300 underline">Go home</a>
+        <h1 className="font-serif text-5xl font-bold italic text-ink">404</h1>
+        <p className="mt-3 text-base text-ink/60">This page does not exist.</p>
+        <Link
+          to="/workspace/business"
+          className="mt-5 inline-block border border-ink bg-ink px-4 py-2 text-sm font-semibold uppercase tracking-wider text-paper transition hover:bg-flame hover:border-flame"
+        >
+          go to business live
+        </Link>
       </div>
     </div>
   );

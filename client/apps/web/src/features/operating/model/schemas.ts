@@ -190,9 +190,164 @@ export const InsightRankingPackageSchema = z.strictObject({
 export const BriefPackageSchema = z.strictObject({
   agent: z.literal('BriefSynthesizer'),
   headline: z.string(),
+  body: z.string().optional(),
   summary_points: z.array(z.string()),
   urgent_artifact_ids: z.array(z.string()),
   why: z.string(),
+});
+
+export const StructureTransformationSchema = z.strictObject({
+  operation: z.enum([
+    'drop_empty_rows',
+    'promote_header',
+    'split_region',
+    'unnest_json',
+    'pivot_to_rows',
+    'merge_columns',
+    'parse_document',
+    'normalize_values',
+  ]),
+  why: z.string(),
+  parameters: RecordSchema,
+});
+
+export const StructuredFieldProposalSchema = z.strictObject({
+  field_key: z.string(),
+  label: z.string(),
+  source_fields: z.array(z.string()),
+  baseflo_type: z.enum([
+    'null',
+    'string',
+    'integer',
+    'number',
+    'boolean',
+    'date',
+    'datetime',
+    'email',
+    'phone',
+    'money',
+    'id',
+    'json',
+    'binary',
+  ]),
+  semantic_hint: z.string().nullable(),
+  nullable: z.boolean(),
+  confidence: z.number(),
+  evidence: RecordSchema,
+});
+
+export const StructuredAssetProposalSchema = z.strictObject({
+  asset_key: z.string(),
+  label: z.string(),
+  asset_id: z.string().nullable(),
+  extraction_mode: z.enum(['deterministic', 'agent_proposed', 'human_confirmed']),
+  structure_type: z.enum([
+    'table',
+    'event_stream',
+    'entity_collection',
+    'document_collection',
+    'metric_series',
+    'unknown',
+  ]),
+  source_locator: RecordSchema,
+  grain: z.string(),
+  primary_time_field: z.string().nullable(),
+  primary_entity_fields: z.array(z.string()),
+  fields: z.array(StructuredFieldProposalSchema),
+  transformations: z.array(StructureTransformationSchema),
+  rejected_source_fields: z.array(z.string()),
+  confidence: z.number(),
+  requires_human_confirmation: z.boolean(),
+  why: z.string(),
+});
+
+export const StructureRoutingDecisionSchema = z.strictObject({
+  asset_id: z.string(),
+  asset_key: z.string(),
+  label: z.string(),
+  route: z.enum(['deterministic_ready', 'agentic_structure', 'human_confirmation']),
+  reason: z.string(),
+  confidence: z.number(),
+});
+
+export const WorkbenchViewSchema = z.strictObject({
+  view_id: z.string(),
+  title: z.string(),
+  output_kind: z.enum(['table', 'metric', 'bar', 'line', 'map', 'cohort']),
+  question: z.string(),
+  asset_refs: z.array(z.string()),
+  dimension_field_refs: z.array(z.string()),
+  measure_field_refs: z.array(z.string()),
+  why: z.string(),
+  confidence: z.number(),
+});
+
+export const WorkbenchActionSchema = z.strictObject({
+  action_id: z.string(),
+  title: z.string(),
+  action_type: z.enum([
+    'ask',
+    'export_table',
+    'save_cohort',
+    'bulk_message',
+    'send_reminder',
+    'prepare_report',
+  ]),
+  target_entity: z.string().nullable(),
+  payload_template: RecordSchema,
+  approval_required: z.string(),
+  why: z.string(),
+  confidence: z.number(),
+});
+
+export const GeneratedWorkbenchSchema = z.strictObject({
+  workbench_id: z.string(),
+  title: z.string(),
+  kind: z.enum([
+    'sales',
+    'receivables',
+    'inventory',
+    'customers_parties',
+    'products_items',
+    'expenses',
+    'profit_loss',
+    'operations',
+    'source_health',
+  ]),
+  description: z.string(),
+  asset_refs: z.array(z.string()),
+  field_refs: z.array(z.string()),
+  views: z.array(WorkbenchViewSchema),
+  actions: z.array(WorkbenchActionSchema),
+  confidence: z.number(),
+  why: z.string(),
+});
+
+export const SourceStructureAgentOutputSchema = z.strictObject({
+  agent: z.literal('SourceStructureAgent'),
+  source_kind: z.string(),
+  extraction_mode: z.literal('agent_proposed'),
+  assets: z.array(StructuredAssetProposalSchema),
+  rejected_regions: z.array(
+    z.strictObject({
+      locator: RecordSchema,
+      reason: z.string(),
+      confidence: z.number(),
+    }),
+  ),
+  questions_for_user: z.array(z.string()),
+  confidence: z.number(),
+});
+
+export const SourceStructurePackageSchema = z.strictObject({
+  assets: z.array(StructuredAssetProposalSchema),
+  workbenches: z.array(GeneratedWorkbenchSchema),
+  routing: z.array(StructureRoutingDecisionSchema),
+  agentic_outputs: z.array(SourceStructureAgentOutputSchema),
+  agentic_status: z.enum(['not_needed', 'ran', 'unavailable', 'failed']),
+  deterministic_policy: z.array(z.string()),
+  generated_from: RecordSchema,
+  confidence: z.number(),
 });
 
 export const LineagePackageSchema = z.strictObject({
@@ -226,6 +381,74 @@ export const ChartGrammarPackageSchema = z.strictObject({
   generated_from: RecordSchema,
 });
 
+export const EntityResolutionPackageSchema = z.strictObject({
+  plans: z.array(RecordSchema),
+  executions: z.array(RecordSchema),
+  generated_from: RecordSchema,
+});
+
+// ---------------------------------------------------------------------------
+// Entity Register
+// ---------------------------------------------------------------------------
+
+export const EntityRegisterColumnSchema = z.strictObject({
+  key: z.string(),
+  label: z.string(),
+  role: z.string(),
+  unit: z.string().nullable(),
+});
+
+export const EntityRegisterRowSchema = z.strictObject({
+  cluster_id: z.string(),
+  display_name: z.string(),
+  entity_type: z.string(),
+  fields: RecordSchema,
+  cohort_flags: z.array(z.string()),
+  decision_tags: z.array(z.string()),
+  source_names: z.array(z.string()),
+  source_count: z.number(),
+  member_record_ids: z.array(z.string()),
+});
+
+export const EntityRegisterCohortSummarySchema = z.strictObject({
+  cohort_id: z.string(),
+  label: z.string(),
+  description: z.string(),
+  size_hint: z.string().nullable(),
+  value_hint: z.string().nullable(),
+  actionability: z.number(),
+  why: z.string(),
+});
+
+export const EntityRegisterTabSchema = z.strictObject({
+  entity_type: z.string(),
+  label: z.string(),
+  description: z.string(),
+  total_count: z.number(),
+  rows: z.array(EntityRegisterRowSchema),
+  columns: z.array(EntityRegisterColumnSchema),
+  cohort_summaries: z.array(EntityRegisterCohortSummarySchema),
+  available_action_types: z.array(z.string()),
+});
+
+export const EntityRegisterPackageSchema = z.strictObject({
+  business_kind: z.string(),
+  tabs: z.array(EntityRegisterTabSchema),
+  total_row_count: z.number(),
+  source_count: z.number(),
+  cross_source_cluster_count: z.number(),
+  resolved_entity_count: z.number(),
+  generated_from: RecordSchema,
+});
+
+export type EntityRegisterPackage = z.infer<typeof EntityRegisterPackageSchema>;
+export type SourceStructurePackage = z.infer<typeof SourceStructurePackageSchema>;
+export type GeneratedWorkbench = z.infer<typeof GeneratedWorkbenchSchema>;
+export type StructuredAssetProposal = z.infer<typeof StructuredAssetProposalSchema>;
+export type EntityRegisterTab = z.infer<typeof EntityRegisterTabSchema>;
+export type EntityRegisterRow = z.infer<typeof EntityRegisterRowSchema>;
+export type EntityRegisterColumn = z.infer<typeof EntityRegisterColumnSchema>;
+export type EntityRegisterCohortSummary = z.infer<typeof EntityRegisterCohortSummarySchema>;
 export type BusinessViewPackage = z.infer<typeof BusinessViewPackageSchema>;
 export type BusinessViewSection = z.infer<typeof BusinessViewSectionSchema>;
 export type BusinessViewMetric = z.infer<typeof BusinessViewMetricSchema>;
@@ -238,6 +461,7 @@ export type SurfaceCohort = z.infer<typeof SurfaceCohortSchema>;
 export type BulkActionPack = z.infer<typeof BulkActionPackSchema>;
 export type RankedInsight = z.infer<typeof RankedInsightSchema>;
 export type BriefPackage = z.infer<typeof BriefPackageSchema>;
+export type EntityResolutionPackage = z.infer<typeof EntityResolutionPackageSchema>;
 
 export function parseArtifactPayload<T>(
   artifact: ArtifactRecord,

@@ -66,6 +66,7 @@ def _table_schema_from_preprocessed(table: PreprocessedTable) -> TableSchema:
         metadata={
             **table.metadata,
             "source": table.source,
+            "logical_label": table.label,
             "preview_rows": preview_rows(table),
         },
     )
@@ -297,7 +298,16 @@ class GoogleSheetsSource(Source):
             tables[0],
         )
         for idx, row in enumerate(table.rows, start=1):
-            yield _row_from_preprocessed(table, row, source_id=str(idx))
+            source_row_number = (
+                table.source_row_numbers[idx - 1]
+                if idx - 1 < len(table.source_row_numbers)
+                else idx
+            )
+            yield _row_from_preprocessed(
+                table,
+                row,
+                source_id=str(source_row_number),
+            )
 
     async def get_account_info(self, credentials: dict[str, Any]) -> AccountInfo:
         access_token = credentials["access_token"]

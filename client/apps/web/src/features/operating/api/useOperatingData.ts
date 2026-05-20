@@ -15,10 +15,13 @@ import {
   BusinessSurfacePackageSchema,
   BusinessViewPackageSchema,
   ChartGrammarPackageSchema,
+  EntityRegisterPackageSchema,
   InsightRankingPackageSchema,
   KnowledgeGraphPackageSchema,
   LineagePackageSchema,
   SemanticLayerPackageSchema,
+  EntityResolutionPackageSchema,
+  SourceStructurePackageSchema,
   safeParseArtifactPayload,
 } from '../model/schemas.js';
 
@@ -48,9 +51,11 @@ export function useBriefArtifact() {
 export function useBusinessLiveArtifacts() {
   const businessView = useLatestArtifact('business_view');
   const businessSurfaces = useLatestArtifact('business_surfaces');
+  const sourceStructure = useLatestArtifact('source_structure');
   return {
     businessViewArtifact: businessView.data ?? null,
     businessSurfaceArtifact: businessSurfaces.data ?? null,
+    sourceStructureArtifact: sourceStructure.data ?? null,
     businessView: useMemo(
       () => safeParseArtifactPayload(businessView.data, 'business_view', BusinessViewPackageSchema),
       [businessView.data],
@@ -60,12 +65,18 @@ export function useBusinessLiveArtifacts() {
         safeParseArtifactPayload(businessSurfaces.data, 'business_surfaces', BusinessSurfacePackageSchema),
       [businessSurfaces.data],
     ),
-    isPending: businessView.isPending || businessSurfaces.isPending,
-    isError: businessView.isError || businessSurfaces.isError,
-    error: businessView.error ?? businessSurfaces.error,
+    sourceStructure: useMemo(
+      () =>
+        safeParseArtifactPayload(sourceStructure.data, 'source_structure', SourceStructurePackageSchema),
+      [sourceStructure.data],
+    ),
+    isPending: businessView.isPending || businessSurfaces.isPending || sourceStructure.isPending,
+    isError: businessView.isError || businessSurfaces.isError || sourceStructure.isError,
+    error: businessView.error ?? businessSurfaces.error ?? sourceStructure.error,
     refetch: () => {
       void businessView.refetch();
       void businessSurfaces.refetch();
+      void sourceStructure.refetch();
     },
   };
 }
@@ -93,6 +104,28 @@ export function useSourceIntelligenceArtifacts() {
     lineage: safeParseArtifactPayload(lineage.data, 'lineage', LineagePackageSchema),
     isPending: semanticLayer.isPending || chartGrammar.isPending || knowledgeGraph.isPending || lineage.isPending,
     error: semanticLayer.error ?? chartGrammar.error ?? knowledgeGraph.error ?? lineage.error,
+  };
+}
+
+export function useEntityRegister() {
+  const query = useLatestArtifact('entity_register');
+  return {
+    ...query,
+    parsed: useMemo(
+      () => safeParseArtifactPayload(query.data, 'entity_register', EntityRegisterPackageSchema),
+      [query.data],
+    ),
+  };
+}
+
+export function useEntityResolutionArtifact() {
+  const query = useLatestArtifact('entity_resolution');
+  return {
+    ...query,
+    parsed: useMemo(
+      () => safeParseArtifactPayload(query.data, 'entity_resolution', EntityResolutionPackageSchema),
+      [query.data],
+    ),
   };
 }
 

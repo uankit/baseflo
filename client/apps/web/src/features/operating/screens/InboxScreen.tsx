@@ -8,9 +8,11 @@ import {
 } from '../api/useOperatingData.js';
 import { ActionCard } from '../components/ActionCard.js';
 import { EvidenceTable } from '../components/EvidenceTable.js';
+import { VegaChart } from '../components/VegaChart.js';
 import { EmptyPanel, ErrorPanel, LoadingPanel, ScreenFrame, SecondaryButton } from '../../common/components/StatePanels.js';
 import { TagList, WhyPanel } from '../components/WhyPanel.js';
 import { compactDateTime, labelize, percent } from '../../common/model/format.js';
+import type { VisualizationSpec } from 'vega-embed';
 
 export function InboxScreen() {
   const inbox = useInboxArtifacts(100);
@@ -46,7 +48,7 @@ export function InboxScreen() {
       <ScreenFrame eyebrow="inbox" title="No action backlog yet">
         <EmptyPanel
           title="Inbox items appear after Baseflo executes analyses"
-          summary="The inbox is not a notification feed. It only shows durable artifacts that have evidence, lineage, and proposed actions."
+          summary="The inbox shows durable artifacts that have evidence, lineage, and proposed actions."
         />
       </ScreenFrame>
     );
@@ -54,7 +56,7 @@ export function InboxScreen() {
 
   return (
     <ScreenFrame
-      eyebrow="inbox · action backlog"
+      eyebrow="inbox"
       title={`${items.length} operating reads need review`}
       summary="Each item is grounded in an analysis graph, evidence preview, lineage, and optionally a preparable action."
     >
@@ -78,11 +80,11 @@ export function InboxScreen() {
         </aside>
 
         {selected ? (
-          <article className="border border-ink/25 bg-paper-soft p-5">
+          <article className="border border-ink/25 bg-paper-soft p-5 shadow-[3px_3px_0_rgba(28,25,20,0.08)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink/40">
-                  {selected.artifact_key} · {percent(selected.priority)}
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/40">
+                  {labelize(selected.kind)} · {percent(selected.priority)}
                 </p>
                 <h1 className="mt-2 max-w-4xl font-serif text-4xl font-bold italic leading-tight text-ink">
                   {selected.title}
@@ -100,7 +102,22 @@ export function InboxScreen() {
             <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_360px]">
               <div className="space-y-5">
                 <WhyPanel>{selected.why}</WhyPanel>
-                <EvidenceTable rows={previewRows(selected)} />
+
+                {chartFromPayload(selected) ? (
+                  <div className="border border-ink/20 bg-paper-soft p-3">
+                    <VegaChart spec={chartFromPayload(selected) as VisualizationSpec} />
+                  </div>
+                ) : null}
+
+                <details className="border border-ink/20 bg-paper-soft">
+                  <summary className="cursor-pointer p-4 text-sm font-semibold text-ink/60 hover:text-ink">
+                    View evidence
+                  </summary>
+                  <div className="p-4 pt-0">
+                    <EvidenceTable rows={previewRows(selected)} />
+                  </div>
+                </details>
+
                 {selectedAction ? (
                   <ActionCard
                     action={selectedAction}
@@ -118,7 +135,6 @@ export function InboxScreen() {
               <aside className="space-y-4">
                 <MetaBox label="first seen" value={compactDateTime(selected.first_seen_at)} />
                 <MetaBox label="last seen" value={compactDateTime(selected.last_seen_at)} />
-                <LineageBox artifact={selected} />
                 <SecondaryButton onClick={() => setSelectedId(null)}>clear selection</SecondaryButton>
               </aside>
             </div>
@@ -147,7 +163,7 @@ function InboxListItem({
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-60">{item.artifact_key}</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-60">{labelize(item.kind)}</p>
         <span className="font-mono text-[10px] opacity-60">{percent(item.priority)}</span>
       </div>
       <h2 className="mt-2 text-sm font-bold leading-5">{item.title}</h2>
@@ -167,17 +183,6 @@ function MetaBox({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LineageBox({ artifact }: { artifact: ArtifactRecord }) {
-  return (
-    <div className="border border-ink/20 bg-paper p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink/40">lineage refs</p>
-      <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap text-xs leading-5 text-ink/55">
-        {JSON.stringify(artifact.source_refs, null, 2)}
-      </pre>
-    </div>
-  );
-}
-
 function previewRows(artifact: ArtifactRecord): Array<Record<string, unknown>> {
   const execution = artifact.payload.execution;
   if (!isRecord(execution)) return [];
@@ -185,6 +190,14 @@ function previewRows(artifact: ArtifactRecord): Array<Record<string, unknown>> {
   if (!isRecord(result)) return [];
   const rows = result.result_preview;
   return Array.isArray(rows) ? rows.filter(isRecord) : [];
+}
+
+function chartFromPayload(artifact: ArtifactRecord): Record<string, unknown> | null {
+  const chart = artifact.payload.chart;
+  if (isRecord(chart) && chart.vega_lite) return chart.vega_lite as Record<string, unknown>;
+  const execution = artifact.payload.execution;
+  if (isRecord(execution) && execution.chart) return execution.chart as Record<string, unknown>;
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

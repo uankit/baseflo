@@ -1,10 +1,13 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { IconDatabase, IconLogOut, IconSparkles, IconZap } from '@baseflo/ui/icons';
+import { PulseDot } from '@baseflo/ui/composites';
 import { useAuth } from '../../auth/hooks/useAuth.js';
 import { useActions, useInboxArtifacts } from '../api/useOperatingData.js';
+import { useOperatingRunStream } from '../api/useOperatingRunStream.js';
 
 const navItems = [
-  { to: '/workspace/business', label: 'Business' },
+  { to: '/workspace/register', label: 'Register' },
+  { to: '/workspace/business', label: 'Overview' },
   { to: '/workspace/brief', label: 'Brief' },
   { to: '/workspace/inbox', label: 'Inbox' },
   { to: '/workspace/ask', label: 'Ask' },
@@ -17,10 +20,12 @@ export function OperatingShell() {
   const router = useRouterState();
   const inbox = useInboxArtifacts(50);
   const actions = useActions({ include_terminal: false, limit: 50 });
+  const runner = useOperatingRunStream();
 
   const currentPath = router.location.pathname;
   const reads = inbox.data?.length ?? 0;
   const actionCount = actions.data?.length ?? 0;
+  const isRunning = runner.isRunning;
 
   return (
     <div className="min-h-screen bg-paper text-ink selection:bg-flame/25">
@@ -63,8 +68,14 @@ export function OperatingShell() {
             </span>
             <span className="hidden h-4 w-px bg-ink/20 sm:block" />
             <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-moss" aria-hidden />
-              <span className="font-semibold uppercase tracking-wider text-ink">live</span>
+              {isRunning ? (
+                <PulseDot tone="accent" size={8} active />
+              ) : (
+                <span className="h-1.5 w-1.5 rounded-full bg-moss" aria-hidden />
+              )}
+              <span className="font-semibold uppercase tracking-wider text-ink">
+                {isRunning ? 'working' : 'live'}
+              </span>
             </span>
             <IconDatabase className="hidden h-3.5 w-3.5 text-ink/35 lg:block" />
             <span className="hidden max-w-[180px] truncate text-ink/45 lg:inline">

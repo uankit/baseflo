@@ -20,7 +20,10 @@ export {
   FileArchive as IconExport,
   Trash2 as IconTrash,
   RefreshCw as IconRefresh,
+  RefreshCw as IconRefreshCw,
   Upload as IconUpload,
+  Mail as IconMail,
+  MessageSquare as IconMessageSquare,
   // Status
   Check as IconCheck,
   X as IconX,
@@ -44,6 +47,7 @@ export {
   Package as IconProducts,
   Plug as IconConnectors,
   BarChart3 as IconAnalytics,
+  BarChart3 as IconBarChart3,
   TrendingUp as IconTrendingUp,
   TrendingDown as IconTrendingDown,
   Minus as IconMinus,

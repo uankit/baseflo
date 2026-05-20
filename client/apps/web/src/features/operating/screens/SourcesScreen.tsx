@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { IconConnectors } from '@baseflo/ui/icons';
+import { SyncPulse } from '@baseflo/ui/composites';
 import { useDataSources, useSourceIntelligenceArtifacts } from '../api/useOperatingData.js';
 import { EmptyPanel, ErrorPanel, LoadingPanel, PrimaryButton, ScreenFrame } from '../../common/components/StatePanels.js';
 import { WhyPanel } from '../components/WhyPanel.js';
@@ -43,7 +44,7 @@ export function SourcesScreen() {
         <section className="space-y-4">
           {sources.data?.length ? (
             sources.data.map((source) => (
-              <article key={source.id} className="border border-ink/25 bg-paper-soft p-5">
+              <article key={source.id} className="border border-ink/25 bg-paper-soft p-5 shadow-[2px_2px_0_rgba(28,25,20,0.06)]">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink/40">
@@ -51,9 +52,18 @@ export function SourcesScreen() {
                     </p>
                     <h2 className="mt-2 font-serif text-3xl font-bold italic text-ink">{source.name}</h2>
                   </div>
-                  <span className={`border px-2 py-1 text-xs font-semibold ${toneClass(statusTone(source.status))}`}>
-                    {labelize(source.status)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {source.status === 'syncing' ? (
+                      <span className="flex items-center gap-1.5 border border-info/40 bg-info/10 px-2 py-1 text-xs font-semibold text-info">
+                        <SyncPulse />
+                        syncing
+                      </span>
+                    ) : (
+                      <span className={`border px-2 py-1 text-xs font-semibold ${toneClass(statusTone(source.status))}`}>
+                        {labelize(source.status)}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <SourceMeta label="created" value={compactDateTime(source.created_at)} />
@@ -119,7 +129,7 @@ function SourceMeta({ label, value }: { label: string; value: string }) {
 
 function PackageStat({ label, value, why }: { label: string; value: string; why: string }) {
   return (
-    <div className="border border-ink/20 bg-paper-soft p-4">
+    <div className="border border-ink/20 bg-paper-soft p-4 shadow-[2px_2px_0_rgba(28,25,20,0.06)]">
       <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-ink/45">
         {label}
       </p>

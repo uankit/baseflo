@@ -85,6 +85,7 @@ export interface OperatingRunResult {
   action_batches: Array<Record<string, unknown>>;
   narratives: Array<Record<string, unknown>>;
   brief?: Record<string, unknown> | null;
+  source_structure?: Record<string, unknown> | null;
   business_view?: BusinessViewPackage | null;
   business_surfaces?: BusinessSurfacePackage | null;
   semantic_layer?: SemanticLayerPackage | null;
@@ -102,8 +103,10 @@ export type RunKind = 'operating' | 'source_sync' | 'action' | 'export';
 export type RunStatus = 'queued' | 'running' | 'completed' | 'partial' | 'failed' | 'cancelled';
 export type ArtifactKind =
   | 'brief'
+  | 'source_structure'
   | 'business_view'
   | 'business_surfaces'
+  | 'entity_register'
   | 'semantic_layer'
   | 'chart_grammar'
   | 'insight_ranking'
@@ -190,6 +193,7 @@ export interface ArtifactPlaneRunResult {
   run_id: string;
   artifacts: ArtifactRecord[];
   brief_artifact_id?: string | null;
+  source_structure_artifact_id?: string | null;
   business_view_artifact_id?: string | null;
   business_surfaces_artifact_id?: string | null;
   semantic_layer_artifact_id?: string | null;
@@ -391,6 +395,7 @@ const OperatingRunResultSchema = z.object({
   action_batches: z.array(z.record(z.string(), z.unknown())),
   narratives: z.array(z.record(z.string(), z.unknown())),
   brief: z.record(z.string(), z.unknown()).nullable().optional(),
+  source_structure: z.record(z.string(), z.unknown()).nullable().optional(),
   business_view: z.lazy(() => BusinessViewPackageSchema).nullable().optional(),
   business_surfaces: z.lazy(() => BusinessSurfacePackageSchema).nullable().optional(),
   semantic_layer: z.lazy(() => SemanticLayerPackageSchema).nullable().optional(),
@@ -445,8 +450,10 @@ const RunStateSchema = z.object({
 
 const ArtifactKindSchema = z.enum([
   'brief',
+  'source_structure',
   'business_view',
   'business_surfaces',
+  'entity_register',
   'semantic_layer',
   'chart_grammar',
   'insight_ranking',
@@ -498,6 +505,7 @@ const ArtifactPlaneRunResultSchema = z.object({
   run_id: z.string(),
   artifacts: z.array(ArtifactRecordSchema).default([]),
   brief_artifact_id: z.string().nullable().optional(),
+  source_structure_artifact_id: z.string().nullable().optional(),
   business_view_artifact_id: z.string().nullable().optional(),
   business_surfaces_artifact_id: z.string().nullable().optional(),
   semantic_layer_artifact_id: z.string().nullable().optional(),
